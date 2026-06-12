@@ -47,7 +47,7 @@ export const useAclStore = create<AclState>()((set, get) => ({
   },
   can: (resource, action) => {
     const state = get()
-    if (state.role === 'superadmin') return true
+    if (state.role === 'superadmin' || state.role === 'super_admin') return true
     const p = state.permissions[resource]
     if (!p) return false
     return p[action]

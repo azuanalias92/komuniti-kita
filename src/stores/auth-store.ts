@@ -12,6 +12,7 @@ export interface AuthUser {
   tenantName: string
   tenantSlug?: string
   exp: number
+  tenants?: { id: string; name: string; slug: string }[]
 }
 
 interface AuthState {

@@ -46,7 +46,7 @@ async function generateToken(
   return `${data}.${sigB64}`
 }
 
-export async function onRequestGet({ request, env }: { request: Request; env: { DB: D1Database; GOOGLE_CLIENT_ID?: string; GOOGLE_CLIENT_SECRET?: string; JWT_SECRET?: string } }) {
+export async function onRequestGet({ request, env }: { request: Request; env: { DB: D1Database; GOOGLE_CLIENT_ID?: string; GOOGLE_CLIENT_SECRET?: string; JWT_SECRET?: string; SUPER_ADMIN_EMAIL?: string } }) {
   try {
     return await handleCallback({ request, env })
   } catch (e) {
@@ -57,7 +57,7 @@ export async function onRequestGet({ request, env }: { request: Request; env: { 
   }
 }
 
-async function handleCallback({ request, env }: { request: Request; env: { DB: D1Database; GOOGLE_CLIENT_ID?: string; GOOGLE_CLIENT_SECRET?: string; JWT_SECRET?: string } }) {
+async function handleCallback({ request, env }: { request: Request; env: { DB: D1Database; GOOGLE_CLIENT_ID?: string; GOOGLE_CLIENT_SECRET?: string; JWT_SECRET?: string; SUPER_ADMIN_EMAIL?: string } }) {
   const url = new URL(request.url)
   const origin = url.origin
   const code = url.searchParams.get('code') || ''
@@ -110,6 +110,43 @@ async function handleCallback({ request, env }: { request: Request; env: { DB: D
   }
 
   const jwtSecret = env.JWT_SECRET || 'dev-jwt-secret-change-in-production'
+
+  // — Super admin bypass —
+  // If this email matches SUPER_ADMIN_EMAIL, skip invite/approval flow entirely
+  // and grant access to all tenants.
+  const isSuperAdmin = env.SUPER_ADMIN_EMAIL && userEmail === env.SUPER_ADMIN_EMAIL
+
+  if (isSuperAdmin) {
+    const { results: allTenants } = await env.DB.prepare(
+      `SELECT id, name, slug FROM tenants ORDER BY name`
+    ).all() as { results: { id: string; name: string; slug: string }[] | null }
+
+    const tenantList = allTenants || []
+
+    const accessToken = await generateToken(
+      { sub: 'super-admin', email: userEmail, role: ['super_admin'], tenantId: '*', tenantName: 'All Communities' },
+      jwtSecret
+    )
+
+    const user = {
+      accountNo: 'super-admin',
+      email: userEmail,
+      role: ['super_admin'],
+      tenantId: '*',
+      tenantName: 'All Communities',
+      tenantSlug: '*',
+      exp: Date.now() + 24 * 60 * 60 * 1000,
+      name: userName || 'Super Admin',
+      tenants: tenantList,
+    }
+
+    const headers = new Headers({ Location: `${origin}/` })
+    headers.append('Set-Cookie', `thisisjustarandomstring=${encodeURIComponent(accessToken)}; Path=/; Max-Age=${60 * 60 * 24 * 7}`)
+    headers.append('Set-Cookie', `auth_user=${encodeURIComponent(JSON.stringify(user))}; Path=/; Max-Age=${60 * 60 * 24 * 7}`)
+    headers.append('Set-Cookie', 'oauth_state=; Path=/; Max-Age=0')
+    headers.append('Set-Cookie', 'oauth_verifier=; Path=/; Max-Age=0')
+    return new Response(null, { status: 302, headers })
+  }
 
   // Ensure users table exists
   await env.DB.prepare(
