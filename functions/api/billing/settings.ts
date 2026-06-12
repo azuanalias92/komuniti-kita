@@ -1,4 +1,4 @@
-import { hasPermission, getTenantId, getUserFromToken } from '../../_lib/auth'
+import { hasPermission, getTenantId, getUserFromToken } from '../_lib/auth'
 
 interface Env {
   DB: D1Database

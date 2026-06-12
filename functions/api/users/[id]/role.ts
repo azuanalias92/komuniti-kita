@@ -1,4 +1,4 @@
-import { getTenantId } from '../../_lib/auth'
+import { getTenantId } from '../_lib/auth'
 
 async function ensureSchema(env: { DB: D1Database }) {
   await env.DB.prepare(
