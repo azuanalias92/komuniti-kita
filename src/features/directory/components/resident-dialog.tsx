@@ -229,11 +229,11 @@ export function ResidentDialog({ open, onOpenChange, resident, onSubmit, isLoadi
                     </Select>
                   </div> */}
                   <div className="space-y-2">
-                    <label className="text-sm text-muted-foreground">Name</label>
+                    <Label className="text-sm text-muted-foreground">Name</Label>
                     <Input value={owner.name} onChange={(e) => handleUpdateOwner(index, "name", e.target.value)} placeholder="Owner name" />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm text-muted-foreground">Phone</label>
+                    <Label className="text-sm text-muted-foreground">Phone</Label>
                     <Input value={owner.phone} onChange={(e) => handleUpdateOwner(index, "phone", e.target.value)} placeholder="Phone number" />
                   </div>
                   <div className="flex items-start">
@@ -265,15 +265,15 @@ export function ResidentDialog({ open, onOpenChange, resident, onSubmit, isLoadi
                 vehicles.map((vehicle, index) => (
                   <div key={index} className="grid grid-cols-4 gap-2 items-end">
                     <div className="space-y-2">
-                      <label className="text-sm text-muted-foreground">Brand</label>
+                      <Label className="text-sm text-muted-foreground">Brand</Label>
                       <Input value={vehicle.brand} onChange={(e) => handleUpdateVehicle(index, "brand", e.target.value)} placeholder="e.g., Toyota" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm text-muted-foreground">Model</label>
+                      <Label className="text-sm text-muted-foreground">Model</Label>
                       <Input value={vehicle.model} onChange={(e) => handleUpdateVehicle(index, "model", e.target.value)} placeholder="e.g., Camry" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm text-muted-foreground">Plate</label>
+                      <Label className="text-sm text-muted-foreground">Plate</Label>
                       <Input value={vehicle.plate} onChange={(e) => handleUpdateVehicle(index, "plate", e.target.value)} placeholder="e.g., ABC123" />
                     </div>
                     <div className="flex items-end">

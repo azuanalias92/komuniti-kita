@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, getRouteApi } from "@tanstack/react-router";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
 import { Search } from "@/components/search";
@@ -11,8 +14,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { DatePicker } from "@/components/date-picker";
 import { format, parseISO } from "date-fns";
 import { useAuthStore } from "@/stores/auth-store";
@@ -62,15 +65,30 @@ export function HomestayCheckinList() {
   const checkins = data ?? [];
   const queryClient = useQueryClient();
 
-  // Edit state
+  // Edit dialog state + form
   const [editingCheckin, setEditingCheckin] = useState<HomestayCheckIn | null>(null);
-  const [editForm, setEditForm] = useState({
-    personInCharge: "",
-    numberOfGuests: "",
-    numberPlates: "",
-    dateOfArrival: undefined as Date | undefined,
-    dateOfDeparture: undefined as Date | undefined,
-    additionalNotes: "",
+
+  const editFormSchema = z.object({
+    personInCharge: z.string().min(1, "Person in charge is required"),
+    numberOfGuests: z.coerce.number().int().min(1, "At least 1 guest"),
+    numberPlates: z.string().min(1, "At least one plate is required"),
+    dateOfArrival: z.date().optional(),
+    dateOfDeparture: z.date().optional(),
+    additionalNotes: z.string().optional(),
+  });
+
+  type EditFormValues = z.infer<typeof editFormSchema>;
+
+  const editFormApi = useForm<EditFormValues>({
+    resolver: zodResolver(editFormSchema),
+    defaultValues: {
+      personInCharge: "",
+      numberOfGuests: undefined as any,
+      numberPlates: "",
+      dateOfArrival: undefined,
+      dateOfDeparture: undefined,
+      additionalNotes: "",
+    },
   });
 
   // Update mutation
@@ -105,9 +123,9 @@ export function HomestayCheckinList() {
 
   const handleEditClick = (checkin: HomestayCheckIn) => {
     setEditingCheckin(checkin);
-    setEditForm({
+    editFormApi.reset({
       personInCharge: checkin.personInCharge,
-      numberOfGuests: checkin.numberOfGuests.toString(),
+      numberOfGuests: checkin.numberOfGuests,
       numberPlates: checkin.numberPlates.join(", "),
       dateOfArrival: checkin.dateOfArrival ? parseISO(checkin.dateOfArrival) : undefined,
       dateOfDeparture: checkin.dateOfDeparture ? parseISO(checkin.dateOfDeparture) : undefined,
@@ -119,16 +137,17 @@ export function HomestayCheckinList() {
     e.preventDefault();
     if (!editingCheckin) return;
 
+    const values = editFormApi.getValues();
     const payload = {
-      personInCharge: editForm.personInCharge,
-      numberOfGuests: parseInt(editForm.numberOfGuests),
-      numberPlates: editForm.numberPlates
+      personInCharge: values.personInCharge,
+      numberOfGuests: values.numberOfGuests,
+      numberPlates: values.numberPlates
         .split(",")
         .map((p) => p.trim())
         .filter(Boolean),
-      dateOfArrival: editForm.dateOfArrival?.toISOString(),
-      dateOfDeparture: editForm.dateOfDeparture?.toISOString(),
-      additionalNotes: editForm.additionalNotes,
+      dateOfArrival: values.dateOfArrival?.toISOString(),
+      dateOfDeparture: values.dateOfDeparture?.toISOString(),
+      additionalNotes: values.additionalNotes || "",
     };
 
     updateMutation.mutate({ id: editingCheckin.id, body: payload });
@@ -213,53 +232,96 @@ export function HomestayCheckinList() {
             <DialogHeader>
               <DialogTitle>Edit Check-in</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleEditSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="edit-pic">Person in Charge</Label>
-                <Input id="edit-pic" value={editForm.personInCharge} onChange={(e) => setEditForm({ ...editForm, personInCharge: e.target.value })} required />
-              </div>
-              <div>
-                <Label htmlFor="edit-guests">Number of Guests</Label>
-                <Input
-                  id="edit-guests"
-                  type="number"
-                  min="1"
-                  value={editForm.numberOfGuests}
-                  onChange={(e) => setEditForm({ ...editForm, numberOfGuests: e.target.value })}
-                  required
+            <Form {...editFormApi}>
+              <form onSubmit={handleEditSubmit} className="space-y-4">
+                <FormField
+                  control={editFormApi.control}
+                  name="personInCharge"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Person in Charge</FormLabel>
+                      <FormControl>
+                        <Input {...field} required />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-              <div>
-                <Label>Arrival Date</Label>
-                <DatePicker selected={editForm.dateOfArrival} onSelect={(date) => setEditForm({ ...editForm, dateOfArrival: date })} placeholder="Select arrival date" />
-              </div>
-              <div>
-                <Label>Departure Date</Label>
-                <DatePicker selected={editForm.dateOfDeparture} onSelect={(date) => setEditForm({ ...editForm, dateOfDeparture: date })} placeholder="Select departure date" />
-              </div>
-              <div>
-                <Label htmlFor="edit-plates">Vehicle Plates</Label>
-                <Input
-                  id="edit-plates"
-                  value={editForm.numberPlates}
-                  onChange={(e) => setEditForm({ ...editForm, numberPlates: e.target.value })}
-                  placeholder="Comma separated"
-                  required
+                <FormField
+                  control={editFormApi.control}
+                  name="numberOfGuests"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Number of Guests</FormLabel>
+                      <FormControl>
+                        <Input type="number" min={1} {...field} required />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-              <div>
-                <Label htmlFor="edit-notes">Additional Notes</Label>
-                <Textarea id="edit-notes" value={editForm.additionalNotes} onChange={(e) => setEditForm({ ...editForm, additionalNotes: e.target.value })} rows={3} />
-              </div>
-              <div className="flex gap-2 justify-end">
-                <Button type="button" variant="outline" onClick={() => setEditingCheckin(null)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={updateMutation.isPending}>
-                  {updateMutation.isPending ? "Saving..." : "Save Changes"}
-                </Button>
-              </div>
-            </form>
+                <FormField
+                  control={editFormApi.control}
+                  name="dateOfArrival"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Arrival Date</FormLabel>
+                      <FormControl>
+                        <DatePicker selected={field.value} onSelect={field.onChange} placeholder="Select arrival date" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editFormApi.control}
+                  name="dateOfDeparture"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Departure Date</FormLabel>
+                      <FormControl>
+                        <DatePicker selected={field.value} onSelect={field.onChange} placeholder="Select departure date" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editFormApi.control}
+                  name="numberPlates"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Vehicle Plates</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Comma separated" required {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editFormApi.control}
+                  name="additionalNotes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Additional Notes</FormLabel>
+                      <FormControl>
+                        <Textarea rows={3} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="flex gap-2 justify-end">
+                  <Button type="button" variant="outline" onClick={() => setEditingCheckin(null)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={updateMutation.isPending}>
+                    {updateMutation.isPending ? "Saving..." : "Save Changes"}
+                  </Button>
+                </div>
+              </form>
+            </Form>
           </DialogContent>
         </Dialog>
       </Main>

@@ -7,6 +7,7 @@ import { ThemeSwitch } from "@/components/theme-switch";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon, Download, Search as SearchIcon } from "lucide-react";
@@ -205,7 +206,7 @@ export function CheckInLogs() {
         <Card className="p-6">
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Search</label>
+              <Label className="text-sm font-medium">Search</Label>
               <div className="relative">
                 <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input placeholder="Search checkpoint, user..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
@@ -213,7 +214,7 @@ export function CheckInLogs() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Date From</label>
+              <Label className="text-sm font-medium">Date From</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !dateFrom && "text-muted-foreground")}>
@@ -228,7 +229,7 @@ export function CheckInLogs() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Date To</label>
+              <Label className="text-sm font-medium">Date To</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !dateTo && "text-muted-foreground")}>

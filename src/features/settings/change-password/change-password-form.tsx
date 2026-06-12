@@ -1,71 +1,111 @@
-import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { PasswordInput } from "@/components/password-input";
-import { Label } from "@/components/ui/label";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useAuthStore } from "@/stores/auth-store";
 import { toast } from "sonner";
 
+const formSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Current password is required"),
+    newPassword: z.string().min(7, "Password must be at least 7 characters"),
+    confirmPassword: z.string().min(1, "Please confirm your new password"),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
+
+type FormValues = z.infer<typeof formSchema>;
+
 export function ChangePasswordForm() {
   const { auth } = useAuthStore();
-  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formEl = e.currentTarget;
-    const currentPassword = (formEl.elements.namedItem("currentPassword") as HTMLInputElement)?.value || "";
-    const newPassword = (formEl.elements.namedItem("newPassword") as HTMLInputElement)?.value || "";
-    const confirmPassword = (formEl.elements.namedItem("confirmPassword") as HTMLInputElement)?.value || "";
-    if (!newPassword || newPassword.length < 7) {
-      toast.error("Password must be at least 7 characters");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      toast.error("New password and confirm password don't match");
-      return;
-    }
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    },
+  });
+
+  const { handleSubmit, formState: { isSubmitting } } = form;
+
+  const onSubmit = async (data: FormValues) => {
     const email = auth.user?.email || "";
     if (!email) {
       toast.error("Not logged in");
       return;
     }
-    setLoading(true);
     try {
       const res = await fetch("/api/auth/change-password", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email, currentPassword, newPassword }),
+        body: JSON.stringify({
+          email,
+          currentPassword: data.currentPassword,
+          newPassword: data.newPassword,
+        }),
       });
       if (!res.ok) throw new Error("failed");
       toast.success("Password updated");
-      (formEl.elements.namedItem("currentPassword") as HTMLInputElement).value = "";
-      (formEl.elements.namedItem("newPassword") as HTMLInputElement).value = "";
-      (formEl.elements.namedItem("confirmPassword") as HTMLInputElement).value = "";
+      form.reset();
     } catch {
       toast.error("Failed to update password");
-    } finally {
-      setLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="sm:col-span-2 gap-2 flex flex-col">
-          <Label>Current Password</Label>
-          <PasswordInput name="currentPassword" placeholder="********" />
+    <Form {...form}>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="currentPassword"
+            render={({ field }) => (
+              <FormItem className="sm:col-span-2">
+                <FormLabel>Current Password</FormLabel>
+                <FormControl>
+                  <PasswordInput placeholder="********" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="newPassword"
+            render={({ field }) => (
+              <FormItem className="sm:col-span-2">
+                <FormLabel>New Password</FormLabel>
+                <FormControl>
+                  <PasswordInput placeholder="********" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="confirmPassword"
+            render={({ field }) => (
+              <FormItem className="sm:col-span-2">
+                <FormLabel>Confirm Password</FormLabel>
+                <FormControl>
+                  <PasswordInput placeholder="********" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
-        <div className="sm:col-span-2 gap-2 flex flex-col">
-          <Label>New Password</Label>
-          <PasswordInput name="newPassword" placeholder="********" />
-        </div>
-        <div className="sm:col-span-2 gap-2 flex flex-col">
-          <Label>Confirm Password</Label>
-          <PasswordInput name="confirmPassword" placeholder="********" />
-        </div>
-      </div>
-      <Button type="submit" disabled={loading}>
-        {loading ? "Updating..." : "Update password"}
-      </Button>
-    </form>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Updating..." : "Update password"}
+        </Button>
+      </form>
+    </Form>
   );
 }
