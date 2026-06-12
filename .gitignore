@@ -31,5 +31,4 @@ coverage/
 .DS_Store
 .idea/
 .vscode/
-
 wrangler.toml

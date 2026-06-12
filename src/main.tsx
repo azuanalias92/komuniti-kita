@@ -5,6 +5,7 @@ import { QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-qu
 import { RouterProvider, createRouter } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { useAuthStore } from "@/stores/auth-store";
+import { useTenantStore } from "@/stores/tenant-store";
 import { handleServerError } from "@/lib/handle-server-error";
 import { DirectionProvider } from "./context/direction-provider";
 import { FontProvider } from "./context/font-provider";
@@ -12,6 +13,54 @@ import { ThemeProvider } from "./context/theme-provider";
 import { routeTree } from "./routeTree.gen";
 import "./styles/index.css";
 import { useRegisterSW } from "virtual:pwa-register/react";
+
+function installApiFetchInterceptor() {
+  if (typeof window === "undefined" || (window as any).__kkFetchPatched) return;
+
+  const originalFetch = window.fetch.bind(window);
+
+  window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+    const requestUrl =
+      input instanceof Request ? input.url : input instanceof URL ? input.toString() : String(input);
+
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(requestUrl, window.location.origin);
+    } catch {
+      return originalFetch(input, init);
+    }
+
+    const isApiRequest =
+      parsedUrl.origin === window.location.origin && parsedUrl.pathname.startsWith("/api/");
+
+    if (!isApiRequest) {
+      return originalFetch(input, init);
+    }
+
+    const headers = new Headers(init?.headers || (input instanceof Request ? input.headers : undefined));
+    const { auth } = useAuthStore.getState();
+    const { currentTenantId } = useTenantStore.getState();
+
+    if (auth.accessToken && !headers.has("Authorization")) {
+      headers.set("Authorization", `Bearer ${auth.accessToken}`);
+    }
+
+    const fallbackTenantId = auth.user?.role?.includes("super_admin")
+      ? "*"
+      : auth.user?.tenantId;
+    const tenantId = currentTenantId || fallbackTenantId;
+
+    if (tenantId && tenantId !== "*" && !headers.has("X-Tenant-ID")) {
+      headers.set("X-Tenant-ID", tenantId);
+    }
+
+    return originalFetch(input, { ...init, headers });
+  };
+
+  (window as any).__kkFetchPatched = true;
+}
+
+installApiFetchInterceptor();
 
 const queryClient = new QueryClient({
   defaultOptions: {

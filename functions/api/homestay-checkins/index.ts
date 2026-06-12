@@ -1,6 +1,6 @@
-import { hasPermission, getTenantId } from '../_lib/auth'
+import { addTenantFilter, hasPermission, getTenantId, isAllTenantsScope } from '../_lib/auth'
 
-export async function onRequestGet({ env, request }: { env: { DB: D1Database }; request: Request }) {
+export async function onRequestGet({ env, request }: { env: { DB: any }; request: Request }) {
   try {
     // Check permission
     if (!(await hasPermission(env, request, "/check-in-logs", "read"))) {
@@ -19,11 +19,23 @@ export async function onRequestGet({ env, request }: { env: { DB: D1Database }; 
 
     const tableCheck = await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='homestay_checkins'").first();
     if (!tableCheck) {
-      return new Response(null, { status: 204 });
+      return Response.json({ page, pageSize, total: 0, data: [] });
     }
 
     if (latestByHomestay) {
-      const sql = `
+      const aggregateSql = `
+        SELECT hc.*
+        FROM homestay_checkins hc
+        INNER JOIN (
+          SELECT tenant_id, homestay_id, MAX(submitted_at) AS max_submitted
+          FROM homestay_checkins
+          GROUP BY tenant_id, homestay_id
+        ) latest ON latest.tenant_id = hc.tenant_id
+          AND latest.homestay_id = hc.homestay_id
+          AND latest.max_submitted = hc.submitted_at
+        ORDER BY hc.tenant_id ASC, hc.homestay_id ASC
+      `;
+      const tenantSql = `
         SELECT hc.*
         FROM homestay_checkins hc
         INNER JOIN (
@@ -35,19 +47,22 @@ export async function onRequestGet({ env, request }: { env: { DB: D1Database }; 
         WHERE hc.tenant_id = ?
         ORDER BY hc.homestay_id ASC
       `;
-      const result = await env.DB.prepare(sql).bind(tenantId, tenantId).all();
+      const result = isAllTenantsScope(tenantId)
+        ? await env.DB.prepare(aggregateSql).all()
+        : await env.DB.prepare(tenantSql).bind(tenantId, tenantId).all();
       const data = (result.results || []).map(mapRow);
-      if (!data.length) return new Response(null, { status: 204 });
+      if (!data.length) return Response.json({ data: [] });
       return Response.json({ data });
     }
 
-    const where: string[] = ['tenant_id = ?'];
-    const params: unknown[] = [tenantId];
+    const where: string[] = [];
+    const params: unknown[] = [];
+    addTenantFilter(where, params, tenantId);
     if (homestayId) {
       where.push("homestay_id = ?");
       params.push(homestayId);
     }
-    const whereSql = `WHERE ${where.join(" AND ")}`;
+    const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
     const offset = (page - 1) * pageSize;
 
     const countStmt = env.DB.prepare(`SELECT COUNT(*) as count FROM homestay_checkins ${whereSql}`);
@@ -64,7 +79,7 @@ export async function onRequestGet({ env, request }: { env: { DB: D1Database }; 
       .bind(...params, pageSize, offset)
       .all();
     const data = (result.results || []).map(mapRow);
-    if (!data.length) return new Response(null, { status: 204 });
+    if (!data.length) return Response.json({ page, pageSize, total: total?.count ?? 0, data: [] });
     return Response.json({ page, pageSize, total: total?.count ?? 0, data });
   } catch (err) {
     return new Response(JSON.stringify({ error: "Failed to fetch homestay check-ins" }), {
@@ -74,7 +89,7 @@ export async function onRequestGet({ env, request }: { env: { DB: D1Database }; 
   }
 }
 
-export async function onRequestPost({ env, request }: { env: { DB: D1Database }; request: Request }) {
+export async function onRequestPost({ env, request }: { env: { DB: any }; request: Request }) {
   try {
     // Public endpoint - no permission check needed for creating check-ins
 

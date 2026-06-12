@@ -1,10 +1,14 @@
-import { getTenantId } from '../_lib/auth'
+import { getTenantId, isAllTenantsScope } from '../_lib/auth'
 
-export async function onRequestGet({ env, request }: { env: { DB: D1Database }; request: Request }) {
+export async function onRequestGet({ env, request }: { env: { DB: any }; request: Request }) {
   try {
     const tenantId = getTenantId(request);
     const settings = await getSettings(env.DB)
-    if (!settings) return new Response(JSON.stringify({ error: 'no_settings' }), { status: 400, headers: { 'content-type': 'application/json' } })
+    if (!settings) {
+      return new Response(JSON.stringify({ frequency: 'monthly', rate: 0, period: null, data: [] }), {
+        headers: { 'content-type': 'application/json' },
+      })
+    }
 
     await ensureResidentsTable(env.DB)
     await ensurePaymentsTable(env.DB)
@@ -19,12 +23,18 @@ export async function onRequestGet({ env, request }: { env: { DB: D1Database }; 
     const computed = currentPeriod(freqParam, year, month)
     const period = clampStartToSettings(computed, settings.startDate)
 
-    const residents = await env.DB.prepare('SELECT id, house_no, house_type FROM residents WHERE tenant_id = ? ORDER BY house_no ASC').bind(tenantId).all()
+    const residentsSql = isAllTenantsScope(tenantId)
+      ? 'SELECT id, house_no, house_type, tenant_id FROM residents ORDER BY house_no ASC'
+      : 'SELECT id, house_no, house_type, tenant_id FROM residents WHERE tenant_id = ? ORDER BY house_no ASC'
+    const residents = isAllTenantsScope(tenantId)
+      ? await env.DB.prepare(residentsSql).all()
+      : await env.DB.prepare(residentsSql).bind(tenantId).all()
     const list = [] as any[]
     for (const r of residents.results || []) {
       const houseId = String(r.id)
+      const residentTenantId = String((r as any).tenant_id || tenantId)
       const sumRow = await env.DB.prepare('SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE tenant_id = ? AND house_id = ? AND payment_date BETWEEN ? AND ? AND status = ?')
-        .bind(tenantId, houseId, period.start, period.end, 'confirmed')
+        .bind(residentTenantId, houseId, period.start, period.end, 'confirmed')
         .first() as { total?: number } | null
       const amountPaid = Number(sumRow?.total || 0)
       const amountDue = Number(settings.rate)
@@ -48,7 +58,7 @@ export async function onRequestGet({ env, request }: { env: { DB: D1Database }; 
   }
 }
 
-async function getSettings(db: D1Database) {
+async function getSettings(db: any) {
   await db.prepare(`
     CREATE TABLE IF NOT EXISTS billing_settings (
       id TEXT PRIMARY KEY,
@@ -96,7 +106,7 @@ function clampStartToSettings(period: { start: string; end: string }, settingsSt
   return period
 }
 
-async function ensureResidentsTable(db: D1Database) {
+async function ensureResidentsTable(db: any) {
   await db.prepare(`
     CREATE TABLE IF NOT EXISTS residents (
       id TEXT PRIMARY KEY,
@@ -109,7 +119,7 @@ async function ensureResidentsTable(db: D1Database) {
   `).run()
 }
 
-async function ensurePaymentsTable(db: D1Database) {
+async function ensurePaymentsTable(db: any) {
   await db.prepare(`
     CREATE TABLE IF NOT EXISTS payments (
       id TEXT PRIMARY KEY,

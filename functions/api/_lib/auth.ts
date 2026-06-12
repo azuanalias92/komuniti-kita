@@ -1,23 +1,72 @@
 // Shared auth + tenant utilities for Cloudflare Pages Functions
 
+type TokenPayload = {
+  sub?: string;
+  id?: string;
+  email?: string;
+  role?: string | string[];
+  tenantId?: string;
+  tenant_id?: string;
+};
+
+function decodeTokenPayload(token: string): TokenPayload | null {
+  try {
+    return JSON.parse(atob(token.split(".")[1])) as TokenPayload;
+  } catch {
+    return null;
+  }
+}
+
+function getRoles(payload: TokenPayload | null): string[] {
+  if (!payload?.role) return [];
+  return Array.isArray(payload.role) ? payload.role : [payload.role];
+}
+
+function isSuperAdminRole(role: string | undefined): boolean {
+  return role === "super_admin" || role === "superadmin";
+}
+
+export function isAllTenantsScope(tenantId: string): boolean {
+  return tenantId === "*";
+}
+
+export function addTenantFilter(
+  where: string[],
+  params: unknown[],
+  tenantId: string,
+  column = "tenant_id"
+) {
+  if (isAllTenantsScope(tenantId)) return;
+  where.push(`${column} = ?`);
+  params.push(tenantId);
+}
+
 /**
  * Extract tenant_id from the Authorization header JWT.
  * Returns the tenant_id or 'default' fallback.
  */
 export function getTenantId(request: Request): string {
+  const tenantHeader = request.headers.get("X-Tenant-ID") || "";
   const authHeader = request.headers.get("Authorization") || "";
   if (!authHeader.startsWith("Bearer ")) {
-    const tenantHeader = request.headers.get("X-Tenant-ID") || "default";
+    return tenantHeader || "default";
+  }
+  const token = authHeader.replace("Bearer ", "");
+  const payload = decodeTokenPayload(token);
+  if (!payload) {
+    return tenantHeader || "default";
+  }
+
+  const roles = getRoles(payload);
+  const tokenTenantId = String(payload.tenantId || payload.tenant_id || "");
+  const isWildcardTenant = tokenTenantId === "*";
+  const isSuperAdmin = roles.some(isSuperAdminRole);
+
+  if ((isSuperAdmin || isWildcardTenant) && tenantHeader) {
     return tenantHeader;
   }
-  try {
-    const token = authHeader.replace("Bearer ", "");
-    // Decode JWT payload (base64url)
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    return payload.tenantId || payload.tenant_id || "default";
-  } catch {
-    return request.headers.get("X-Tenant-ID") || "default";
-  }
+
+  return tokenTenantId || tenantHeader || "default";
 }
 
 /**
@@ -42,12 +91,13 @@ export function getUserFromToken(request: Request): {
         tenantId: getTenantId(request),
       };
     }
-    const payload = JSON.parse(atob(token.split(".")[1]));
+    const payload = decodeTokenPayload(token);
+    if (!payload) return null;
     return {
       id: payload.sub || payload.id || "",
       email: payload.email || "",
-      role: Array.isArray(payload.role) ? payload.role : [payload.role || "admin"],
-      tenantId: payload.tenantId || payload.tenant_id || "default",
+      role: getRoles(payload).length ? getRoles(payload) : ["admin"],
+      tenantId: getTenantId(request),
     };
   } catch {
     return null;
@@ -58,7 +108,7 @@ export function getUserFromToken(request: Request): {
  * Check if a user has permission for a given resource + action.
  */
 export async function hasPermission(
-  env: { DB: D1Database },
+  env: { DB: any },
   request: Request,
   resource: string,
   action: "create" | "read" | "update" | "delete"
@@ -74,6 +124,7 @@ export async function hasPermission(
   if (!user) return false;
 
   const roleName = Array.isArray(user.role) ? user.role[0] : user.role;
+  if (isSuperAdminRole(roleName)) return true;
 
   try {
     // Ensure schema

@@ -1,4 +1,4 @@
-import { hasPermission, getTenantId } from '../_lib/auth'
+import { addTenantFilter, hasPermission, getTenantId } from '../_lib/auth'
 
 async function ensureSchema(env: { DB: D1Database }) {
   await env.DB.prepare(
@@ -47,8 +47,7 @@ export async function onRequestGet({ request, env }: { request: Request; env: { 
 
   const where: string[] = [];
   const bind: any[] = [];
-  where.push("tenant_id = ?");
-  bind.push(tenantId);
+  addTenantFilter(where, bind, tenantId);
   if (username) {
     where.push("(username LIKE ? OR first_name LIKE ? OR last_name LIKE ? OR email LIKE ?)");
     bind.push(`%${username}%`, `%${username}%`, `%${username}%`, `%${username}%`);
@@ -61,7 +60,7 @@ export async function onRequestGet({ request, env }: { request: Request; env: { 
     where.push(`role IN (${roles.map(() => "?").join(",")})`);
     bind.push(...roles);
   }
-  const whereSql = `WHERE ${where.join(" AND ")}`;
+  const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
 
   const offset = (page - 1) * pageSize;
   const totalRow = await env.DB.prepare(`SELECT COUNT(*) as cnt FROM users ${whereSql}`)

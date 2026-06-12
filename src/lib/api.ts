@@ -19,7 +19,7 @@ export async function apiFetch(
   }
 
   const tenantId = currentTenantId || auth.user?.tenantId
-  if (tenantId) {
+  if (tenantId && tenantId !== '*') {
     headers.set('X-Tenant-ID', tenantId)
   }
 
@@ -41,10 +41,10 @@ export function syncTenantAfterAuth() {
   const { auth } = useAuthStore.getState()
   const { setTenants, setCurrentTenant } = useTenantStore.getState()
 
-  if (auth.user?.role.includes('super_admin') && auth.user?.tenants?.length) {
-    // Super admin — populate all tenants for the switcher
-    setTenants(auth.user.tenants)
-    setCurrentTenant(auth.user.tenants[0].id)
+  if (auth.user?.role.includes('super_admin')) {
+    // Default super admin to the aggregate "all communities" scope.
+    setTenants(auth.user.tenants || [])
+    setCurrentTenant('*')
   } else if (auth.user?.tenantId) {
     setTenants([
       {

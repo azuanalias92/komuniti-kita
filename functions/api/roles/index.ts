@@ -1,17 +1,19 @@
-import { getTenantId } from '../_lib/auth'
+import { addTenantFilter, getTenantId } from '../_lib/auth'
 
-export async function onRequestGet({ env, request }: { env: { DB: D1Database }; request: Request }) {
+export async function onRequestGet({ env, request }: { env: { DB: any }; request: Request }) {
   await ensureSchema(env)
   const tenantId = getTenantId(request);
-  const rows = await env.DB.prepare(
-    `SELECT id, name, description, start_page FROM roles WHERE tenant_id = ? ORDER BY name`
-  ).bind(tenantId).all()
+  const where: string[] = []
+  const params: unknown[] = []
+  addTenantFilter(where, params, tenantId)
+  const sql = `SELECT id, name, description, start_page FROM roles ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY name`
+  const rows = await env.DB.prepare(sql).bind(...params).all()
   return new Response(JSON.stringify(rows.results || []), {
     headers: { 'content-type': 'application/json' },
   })
 }
 
-export async function onRequestPost({ request, env }: { request: Request; env: { DB: D1Database } }) {
+export async function onRequestPost({ request, env }: { request: Request; env: { DB: any } }) {
   await ensureSchema(env)
   const tenantId = getTenantId(request);
   const json = await request.json().catch(() => ({} as any))
@@ -41,7 +43,7 @@ export async function onRequestPost({ request, env }: { request: Request; env: {
   })
 }
 
-async function ensureSchema(env: { DB: D1Database }) {
+async function ensureSchema(env: { DB: any }) {
   await env.DB.prepare(
     `CREATE TABLE IF NOT EXISTS roles (
       id TEXT PRIMARY KEY,

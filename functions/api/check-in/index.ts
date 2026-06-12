@@ -1,7 +1,7 @@
-import { getTenantId } from '../_lib/auth'
+import { getTenantId, isAllTenantsScope } from '../_lib/auth'
 
 interface Env {
-  DB: D1Database;
+  DB: any;
 }
 
 function getDistanceFromLatLonInKm(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -32,14 +32,19 @@ export async function onRequestGet({ request, env }: { request: Request; env: En
 
     // If both userId and checkpointId are provided, return last check-in for that combination
     if (userId && checkpointId) {
-      const lastCheckIn = await env.DB.prepare(
-        `
+      const sql = isAllTenantsScope(tenantId)
+        ? `
+        SELECT timestamp FROM check_in_logs
+        WHERE user_id = ? AND checkpoint_id = ?
+        ORDER BY timestamp DESC LIMIT 1
+      `
+        : `
         SELECT timestamp FROM check_in_logs 
         WHERE tenant_id = ? AND user_id = ? AND checkpoint_id = ?
         ORDER BY timestamp DESC LIMIT 1
-      `
-      )
-        .bind(tenantId, userId, checkpointId)
+      `;
+      const lastCheckIn = await env.DB.prepare(sql)
+        .bind(...(isAllTenantsScope(tenantId) ? [userId, checkpointId] : [tenantId, userId, checkpointId]))
         .first();
 
       return new Response(
@@ -54,8 +59,19 @@ export async function onRequestGet({ request, env }: { request: Request; env: En
 
     // Otherwise, return all check-in logs with checkpoint info
     try {
-      const logs = await env.DB.prepare(
-        `
+      const sql = isAllTenantsScope(tenantId)
+        ? `
+        SELECT
+          cl.id,
+          cl.user_id,
+          cl.checkpoint_id,
+          cl.timestamp,
+          c.name as checkpoint_name
+        FROM check_in_logs cl
+        LEFT JOIN checkpoints c ON cl.checkpoint_id = c.id
+        ORDER BY cl.timestamp DESC
+      `
+        : `
         SELECT 
           cl.id,
           cl.user_id,
@@ -66,9 +82,9 @@ export async function onRequestGet({ request, env }: { request: Request; env: En
         LEFT JOIN checkpoints c ON cl.checkpoint_id = c.id
         WHERE cl.tenant_id = ?
         ORDER BY cl.timestamp DESC
-      `
-      )
-        .bind(tenantId)
+      `;
+      const logs = await env.DB.prepare(sql)
+        .bind(...(isAllTenantsScope(tenantId) ? [] : [tenantId]))
         .all();
 
       return new Response(JSON.stringify(logs.results || []), {
@@ -192,7 +208,7 @@ export async function onRequestPost({ request, env }: { request: Request; env: E
   }
 }
 
-async function ensureTables(db: D1Database) {
+async function ensureTables(db: any) {
   await db
     .prepare(
       `

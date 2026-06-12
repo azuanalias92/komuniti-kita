@@ -1,11 +1,14 @@
-import { getTenantId } from '../_lib/auth'
+import { getTenantId, isAllTenantsScope } from '../_lib/auth'
 
-export async function onRequestGet({ request, env }: { request: Request; env: { DB: D1Database } }) {
+export async function onRequestGet({ request, env }: { request: Request; env: { DB: any } }) {
   if (!env || !(env as any).DB || typeof (env as any).DB.prepare !== 'function') {
     return new Response(JSON.stringify([]), { headers: { 'content-type': 'application/json' } })
   }
   await ensureSchema(env)
   const tenantId = getTenantId(request);
+  if (isAllTenantsScope(tenantId)) {
+    return new Response(JSON.stringify([]), { headers: { 'content-type': 'application/json' } })
+  }
   const url = new URL(request.url)
   const roleName = url.searchParams.get('role') || ''
   if (!roleName) {
@@ -26,7 +29,7 @@ export async function onRequestGet({ request, env }: { request: Request; env: { 
   })
 }
 
-export async function onRequestPost({ request, env }: { request: Request; env: { DB: D1Database } }) {
+export async function onRequestPost({ request, env }: { request: Request; env: { DB: any } }) {
   if (!env || !(env as any).DB || typeof (env as any).DB.prepare !== 'function') {
     return new Response(JSON.stringify({ ok: true }), { headers: { 'content-type': 'application/json' } })
   }
@@ -72,7 +75,7 @@ export async function onRequestPost({ request, env }: { request: Request; env: {
   })
 }
 
-async function ensureSchema(env: { DB: D1Database }) {
+async function ensureSchema(env: { DB: any }) {
   await env.DB.prepare(
     `CREATE TABLE IF NOT EXISTS roles (
       id TEXT PRIMARY KEY,

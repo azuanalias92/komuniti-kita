@@ -1,6 +1,6 @@
-import { hasPermission, getTenantId } from '../../_lib/auth'
+import { addTenantFilter, hasPermission, getTenantId } from '../../_lib/auth'
 
-export async function onRequestGet({ env, request }: { env: { DB: D1Database }; request: Request }) {
+export async function onRequestGet({ env, request }: { env: { DB: any }; request: Request }) {
   try {
     await ensurePaymentsTable(env.DB)
     const tenantId = getTenantId(request);
@@ -10,8 +10,9 @@ export async function onRequestGet({ env, request }: { env: { DB: D1Database }; 
     const start = url.searchParams.get('start')
     const end = url.searchParams.get('end')
 
-    const where: string[] = ['tenant_id = ?']
-    const params: any[] = [tenantId]
+    const where: string[] = []
+    const params: any[] = []
+    addTenantFilter(where, params, tenantId)
     if (houseId) { where.push('house_id = ?'); params.push(houseId) }
     if (status) { where.push('status = ?'); params.push(status) }
     if (start && end) { where.push('payment_date BETWEEN ? AND ?'); params.push(start, end) }
@@ -24,7 +25,7 @@ export async function onRequestGet({ env, request }: { env: { DB: D1Database }; 
   }
 }
 
-export async function onRequestPost({ env, request }: { env: { DB: D1Database }; request: Request }) {
+export async function onRequestPost({ env, request }: { env: { DB: any }; request: Request }) {
   try {
     await ensurePaymentsTable(env.DB)
     const tenantId = getTenantId(request);
@@ -50,7 +51,7 @@ export async function onRequestPost({ env, request }: { env: { DB: D1Database };
   }
 }
 
-export async function onRequestPut({ env, request }: { env: { DB: D1Database }; request: Request }) {
+export async function onRequestPut({ env, request }: { env: { DB: any }; request: Request }) {
   try {
     if (!(await hasPermission(env, request, '/billing', 'update'))) {
       return new Response(JSON.stringify({ error: 'forbidden' }), { status: 403, headers: { 'content-type': 'application/json' } })
@@ -70,7 +71,7 @@ export async function onRequestPut({ env, request }: { env: { DB: D1Database }; 
   }
 }
 
-async function ensurePaymentsTable(db: D1Database) {
+async function ensurePaymentsTable(db: any) {
   await db.prepare(`
     CREATE TABLE IF NOT EXISTS payments (
       id TEXT PRIMARY KEY,

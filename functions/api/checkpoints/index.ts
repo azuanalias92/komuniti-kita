@@ -1,6 +1,6 @@
-import { hasPermission, getTenantId } from '../_lib/auth'
+import { addTenantFilter, hasPermission, getTenantId } from '../_lib/auth'
 
-export async function onRequestGet({ env, request }: { env: { DB: D1Database }; request: Request }) {
+export async function onRequestGet({ env, request }: { env: { DB: any }; request: Request }) {
   try {
     if (!env || !(env as any).DB || typeof (env as any).DB.prepare !== 'function') {
       return new Response(null, { status: 204 })
@@ -21,19 +21,20 @@ export async function onRequestGet({ env, request }: { env: { DB: D1Database }; 
 
     const offset = (page - 1) * pageSize
 
-    const where: string[] = ['tenant_id = ?']
-    const params: unknown[] = [tenantId]
+    const where: string[] = []
+    const params: unknown[] = []
+    addTenantFilter(where, params, tenantId)
 
     if (name) {
       where.push('(name LIKE ?)')
       params.push(`%${name}%`)
     }
 
-    const whereSql = `WHERE ${where.join(' AND ')}`
+    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : ''
 
     const tableCheck = await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='checkpoints'").first()
     if (!tableCheck) {
-      return new Response(null, { status: 204 })
+      return Response.json({ page, pageSize, total: 0, data: [] })
     }
 
     const countStmt = env.DB.prepare(`SELECT COUNT(*) as count FROM checkpoints ${whereSql}`)
@@ -65,7 +66,7 @@ export async function onRequestGet({ env, request }: { env: { DB: D1Database }; 
     }))
 
     if (!data.length) {
-      return new Response(null, { status: 204 })
+      return Response.json({ page, pageSize, total: total?.count ?? 0, data: [] })
     }
 
     return Response.json({ page, pageSize, total: (total?.count ?? 0), data })
@@ -77,7 +78,7 @@ export async function onRequestGet({ env, request }: { env: { DB: D1Database }; 
   }
 }
 
-export async function onRequestPost({ env, request }: { env: { DB: D1Database }; request: Request }) {
+export async function onRequestPost({ env, request }: { env: { DB: any }; request: Request }) {
   try {
     const contentType = request.headers.get('content-type') || ''
     if (!contentType.includes('application/json')) {
@@ -163,7 +164,7 @@ export async function onRequestPost({ env, request }: { env: { DB: D1Database };
   }
 }
 
-export async function onRequestPut({ env, request }: { env: { DB: D1Database }; request: Request }) {
+export async function onRequestPut({ env, request }: { env: { DB: any }; request: Request }) {
   try {
     const contentType = request.headers.get('content-type') || ''
     if (!contentType.includes('application/json')) {
@@ -220,7 +221,7 @@ export async function onRequestPut({ env, request }: { env: { DB: D1Database }; 
   }
 }
 
-export async function onRequestDelete({ env, request }: { env: { DB: D1Database }; request: Request }) {
+export async function onRequestDelete({ env, request }: { env: { DB: any }; request: Request }) {
   try {
     if (!(await hasPermission(env, request, '/checkpoints', 'delete'))) {
       return new Response(JSON.stringify({ error: 'forbidden' }), {

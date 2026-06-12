@@ -1,6 +1,6 @@
-import { getTenantId } from '../_lib/auth'
+import { addTenantFilter, getTenantId } from '../_lib/auth'
 
-export async function onRequestGet({ env, request }: { env: { DB: D1Database }; request: Request }) {
+export async function onRequestGet({ env, request }: { env: { DB: any }; request: Request }) {
   try {
     const tenantId = getTenantId(request);
     const url = new URL(request.url);
@@ -11,8 +11,9 @@ export async function onRequestGet({ env, request }: { env: { DB: D1Database }; 
 
     const offset = (page - 1) * pageSize;
 
-    const where: string[] = ['tenant_id = ?'];
-    const params: unknown[] = [tenantId];
+    const where: string[] = [];
+    const params: unknown[] = [];
+    addTenantFilter(where, params, tenantId);
 
     if (houseTypes.length) {
       where.push(`(house_type IN (${houseTypes.map(() => "?").join(", ")}))`);
@@ -24,11 +25,11 @@ export async function onRequestGet({ env, request }: { env: { DB: D1Database }; 
       params.push(`%${filter}%`, `%${filter}%`, `%${filter}%`);
     }
 
-    const whereSql = `WHERE ${where.join(" AND ")}`;
+    const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
 
     const tableCheck = await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='residents'").first();
     if (!tableCheck) {
-      return new Response(null, { status: 204 });
+      return Response.json({ page, pageSize, total: 0, data: [] });
     }
 
     const countStmt = env.DB.prepare(`SELECT COUNT(*) as count FROM residents ${whereSql}`);
@@ -58,7 +59,7 @@ export async function onRequestGet({ env, request }: { env: { DB: D1Database }; 
     }));
 
     if (!data.length) {
-      return new Response(null, { status: 204 });
+      return Response.json({ page, pageSize, total: total?.count ?? 0, data: [] });
     }
 
     return Response.json({ page, pageSize, total: total?.count ?? 0, data });
@@ -70,7 +71,7 @@ export async function onRequestGet({ env, request }: { env: { DB: D1Database }; 
   }
 }
 
-export async function onRequestPost({ env, request }: { env: { DB: D1Database }; request: Request }) {
+export async function onRequestPost({ env, request }: { env: { DB: any }; request: Request }) {
   try {
     const tenantId = getTenantId(request);
     const body = await request.json();
@@ -126,7 +127,7 @@ export async function onRequestPost({ env, request }: { env: { DB: D1Database };
             model: String(vehicle.model || "").trim(),
             plate: String(vehicle.plate || "").trim(),
           }))
-          .filter((v) => v.brand && v.model && v.plate)
+          .filter((v: { brand: string; model: string; plate: string }) => v.brand && v.model && v.plate)
       : [];
 
     // Check if house number already exists for this tenant
