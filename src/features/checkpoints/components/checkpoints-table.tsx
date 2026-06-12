@@ -14,6 +14,7 @@ import {
 } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
 import { type NavigateFn, useTableUrlState } from "@/hooks/use-table-url-state";
+import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DataTablePagination, DataTableToolbar } from "@/components/data-table";
 import { type Checkpoint } from "../data/schema";
@@ -130,8 +131,8 @@ export function CheckpointsTable({ data, search, navigate }: DataTableProps) {
   });
 
   return (
-    <>
-      <div className={cn('max-sm:has-[div[role="toolbar"]]:mb-16', "flex flex-1 flex-col gap-4")}>
+    <Card className={cn('max-sm:has-[div[role="toolbar"]]:mb-16', "flex flex-1 flex-col")}>
+      <CardContent className="flex flex-1 flex-col gap-4 p-6">
         {isLoading && <div className="text-muted-foreground">Loading checkpoints...</div>}
         {error && <div className="text-destructive">{(error as Error).message}</div>}
         <DataTableToolbar table={table} searchPlaceholder="Filter checkpoints..." searchKey="name" filters={[]} />
@@ -187,7 +188,7 @@ export function CheckpointsTable({ data, search, navigate }: DataTableProps) {
           </Table>
         </div>
         <DataTablePagination table={table} className="mt-auto" />
-      </div>
-    </>
+      </CardContent>
+    </Card>
   );
 }

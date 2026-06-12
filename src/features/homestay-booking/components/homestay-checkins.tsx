@@ -6,6 +6,8 @@ import { Search } from "@/components/search";
 import { ThemeSwitch } from "@/components/theme-switch";
 import { ConfigDrawer } from "@/components/config-drawer";
 import { ProfileDropdown } from "@/components/profile-dropdown";
+import { PageIntro } from "@/components/layout/page-intro";
+import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
@@ -85,66 +87,70 @@ export function HomestayCheckins() {
           <ProfileDropdown />
         </div>
       </Header>
-      <Main className="flex flex-1 flex-col gap-4 sm:gap-6">
-        <div className="flex flex-wrap items-end justify-between gap-2">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight">Homestay</h2>
-            <p className="text-muted-foreground">Check-in details per homestay with quick access to forms.</p>
-          </div>
-        </div>
+      <Main className="flex flex-1 flex-col gap-6">
+        <PageIntro
+          title="Homestay"
+          subtitle="Review homestay records and open check-in actions."
+        />
 
         {isLoading && <div className="text-muted-foreground">Loading homestays...</div>}
         {error && <div className="text-destructive">{(error as Error).message}</div>}
         {!isLoading && rows.length === 0 && <div className="text-muted-foreground">No homestays found.</div>}
         {rows.length > 0 && (
-          <div className="overflow-x-auto rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>House No</TableHead>
-                  <TableHead>Owners</TableHead>
-                  <TableHead>Latest Check-in</TableHead>
-                  <TableHead>Guests</TableHead>
-                  <TableHead>Arrival</TableHead>
-                  <TableHead>Departure</TableHead>
-                  <TableHead>Plates</TableHead>
-                  <TableHead>Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((r) => {
-                  const latest = data?.latestMap.get(r.houseNo);
-                  const owners = r.owners
-                    ?.map((o) => o.name)
-                    .filter(Boolean)
-                    .join(", ");
-                  return (
-                    <TableRow key={r.id}>
-                      <TableCell>{r.houseNo}</TableCell>
-                      <TableCell>{owners || "-"}</TableCell>
-                      <TableCell>{latest?.personInCharge || "-"}</TableCell>
-                      <TableCell>{latest?.numberOfGuests ?? "-"}</TableCell>
-                      <TableCell>{latest?.dateOfArrival ? format(new Date(latest.dateOfArrival), "dd/MM/yyyy") : "-"}</TableCell>
-                      <TableCell>{latest?.dateOfDeparture ? format(new Date(latest.dateOfDeparture), "dd/MM/yyyy") : "-"}</TableCell>
-                      <TableCell>{latest?.numberPlates?.length ? latest.numberPlates.join(", ") : "-"}</TableCell>
-                      <TableCell>
-                        <Button asChild variant="outline" size="sm">
-                          <Link to="/homestay/$homestayId" params={{ homestayId: r.houseNo }}>
-                            Check In
-                          </Link>
-                        </Button>
-                        <Button asChild variant="outline" size="sm">
-                          <Link to="/homestay-list/$homestayId" params={{ homestayId: r.houseNo }}>
-                            List
-                          </Link>
-                        </Button>
-                      </TableCell>
+          <Card>
+            <CardContent className="p-6">
+              <div className="overflow-x-auto rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>House No</TableHead>
+                      <TableHead>Owners</TableHead>
+                      <TableHead>Latest Check-in</TableHead>
+                      <TableHead>Guests</TableHead>
+                      <TableHead>Arrival</TableHead>
+                      <TableHead>Departure</TableHead>
+                      <TableHead>Plates</TableHead>
+                      <TableHead>Action</TableHead>
                     </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
+                  </TableHeader>
+                  <TableBody>
+                    {rows.map((r) => {
+                      const latest = data?.latestMap.get(r.houseNo);
+                      const owners = r.owners
+                        ?.map((o) => o.name)
+                        .filter(Boolean)
+                        .join(", ");
+                      return (
+                        <TableRow key={r.id}>
+                          <TableCell>{r.houseNo}</TableCell>
+                          <TableCell>{owners || "-"}</TableCell>
+                          <TableCell>{latest?.personInCharge || "-"}</TableCell>
+                          <TableCell>{latest?.numberOfGuests ?? "-"}</TableCell>
+                          <TableCell>{latest?.dateOfArrival ? format(new Date(latest.dateOfArrival), "dd/MM/yyyy") : "-"}</TableCell>
+                          <TableCell>{latest?.dateOfDeparture ? format(new Date(latest.dateOfDeparture), "dd/MM/yyyy") : "-"}</TableCell>
+                          <TableCell>{latest?.numberPlates?.length ? latest.numberPlates.join(", ") : "-"}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button asChild variant="outline" size="sm">
+                                <Link to="/homestay/$homestayId" params={{ homestayId: r.houseNo }}>
+                                  Check In
+                                </Link>
+                              </Button>
+                              <Button asChild variant="outline" size="sm">
+                                <Link to="/homestay-list/$homestayId" params={{ homestayId: r.houseNo }}>
+                                  List
+                                </Link>
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
         )}
       </Main>
     </>

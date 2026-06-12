@@ -5,6 +5,8 @@ import { Search } from "@/components/search";
 import { ThemeSwitch } from "@/components/theme-switch";
 import { ConfigDrawer } from "@/components/config-drawer";
 import { ProfileDropdown } from "@/components/profile-dropdown";
+import { PageIntro } from "@/components/layout/page-intro";
+import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format, isToday, parseISO } from "date-fns";
 import { useAuthStore } from "@/stores/auth-store";
@@ -96,13 +98,11 @@ export function HomestayGuardRecord() {
         </div>
       </Header>
 
-      <Main className="flex flex-1 flex-col gap-4 sm:gap-6">
-        <div className="flex flex-wrap items-end justify-between gap-2">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight">Today's Homestay Vehicle Activity</h2>
-            <p className="text-muted-foreground">Arrivals and Departures - {format(new Date(), "EEEE, dd MMMM yyyy")}</p>
-          </div>
-        </div>
+      <Main className="flex flex-1 flex-col gap-6">
+        <PageIntro
+          title="Homestay Record"
+          subtitle={`Arrivals, stays, and departures for ${format(new Date(), "dd MMM yyyy")}.`}
+        />
 
         {isLoading && <div className="text-muted-foreground">Loading vehicle activity...</div>}
         {error && <div className="text-destructive">{(error as Error).message}</div>}
@@ -118,40 +118,44 @@ export function HomestayGuardRecord() {
               {arrivals.length === 0 ? (
                 <div className="text-muted-foreground text-sm">No arrivals scheduled for today.</div>
               ) : (
-                <div className="overflow-x-auto rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Homestay</TableHead>
-                        <TableHead>Person in Charge</TableHead>
-                        <TableHead>Guests</TableHead>
-                        <TableHead className="font-bold">Vehicle Plates</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {arrivals.map((checkin) => (
-                        <TableRow key={checkin.id}>
-                          <TableCell className="font-medium">{checkin.homestayId}</TableCell>
-                          <TableCell>{checkin.personInCharge}</TableCell>
-                          <TableCell>{checkin.numberOfGuests}</TableCell>
-                          <TableCell className="font-bold text-lg">
-                            {checkin.numberPlates?.length ? (
-                              <div className="flex flex-wrap gap-2">
-                                {checkin.numberPlates.map((plate, idx) => (
-                                  <span key={idx} className="inline-block bg-green-500/10 border border-green-500/20 px-3 py-1 rounded font-mono">
-                                    {plate}
-                                  </span>
-                                ))}
-                              </div>
-                            ) : (
-                              "-"
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="overflow-x-auto rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Homestay</TableHead>
+                            <TableHead>Person in Charge</TableHead>
+                            <TableHead>Guests</TableHead>
+                            <TableHead className="font-bold">Vehicle Plates</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {arrivals.map((checkin) => (
+                            <TableRow key={checkin.id}>
+                              <TableCell className="font-medium">{checkin.homestayId}</TableCell>
+                              <TableCell>{checkin.personInCharge}</TableCell>
+                              <TableCell>{checkin.numberOfGuests}</TableCell>
+                              <TableCell className="font-bold text-lg">
+                                {checkin.numberPlates?.length ? (
+                                  <div className="flex flex-wrap gap-2">
+                                    {checkin.numberPlates.map((plate, idx) => (
+                                      <span key={idx} className="inline-block bg-green-500/10 border border-green-500/20 px-3 py-1 rounded font-mono">
+                                        {plate}
+                                      </span>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  "-"
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
               )}
             </div>
 
@@ -164,8 +168,10 @@ export function HomestayGuardRecord() {
               {staying.length === 0 ? (
                 <div className="text-muted-foreground text-sm">No guests staying today.</div>
               ) : (
-                <div className="overflow-x-auto rounded-md border">
-                  <Table>
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="overflow-x-auto rounded-md border">
+                      <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Homestay</TableHead>
@@ -196,8 +202,10 @@ export function HomestayGuardRecord() {
                         </TableRow>
                       ))}
                     </TableBody>
-                  </Table>
-                </div>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
               )}
             </div>
 
@@ -210,8 +218,10 @@ export function HomestayGuardRecord() {
               {departures.length === 0 ? (
                 <div className="text-muted-foreground text-sm">No departures scheduled for today.</div>
               ) : (
-                <div className="overflow-x-auto rounded-md border">
-                  <Table>
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="overflow-x-auto rounded-md border">
+                      <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Homestay</TableHead>
@@ -242,8 +252,10 @@ export function HomestayGuardRecord() {
                         </TableRow>
                       ))}
                     </TableBody>
-                  </Table>
-                </div>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
               )}
             </div>
           </div>

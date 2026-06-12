@@ -16,6 +16,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useTableUrlState } from "@/hooks/use-table-url-state";
 import { toast } from "sonner";
+import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -261,74 +262,78 @@ export function TasksTable({ data }: DataTableProps) {
   }, [pageCount, ensurePageInRange]);
 
   return (
-    <div
-      className={cn(
-        'max-sm:has-[div[role="toolbar"]]:mb-16', // Add margin bottom to the table on mobile when the toolbar is visible
-        "flex flex-1 flex-col gap-4"
-      )}
-    >
-      {isLoading && <div className="text-muted-foreground">Loading residents...</div>}
-      {error && <div className="text-destructive">{(error as Error).message}</div>}
+    <>
+      <Card
+        className={cn(
+          'max-sm:has-[div[role="toolbar"]]:mb-16',
+          "flex flex-1 flex-col"
+        )}
+      >
+        <CardContent className="flex flex-1 flex-col gap-4 p-6">
+          {isLoading && <div className="text-muted-foreground">Loading residents...</div>}
+          {error && <div className="text-destructive">{(error as Error).message}</div>}
 
-      <div className="flex items-center justify-between">
-        <DataTableToolbar
-          table={table}
-          searchPlaceholder="Filter by house no, owner name, or vehicle plate..."
-          filters={[
-            {
-              columnId: "houseType",
-              title: "House Type",
-              options: houseTypes,
-            },
-          ]}
-        />
-        <Button
-          onClick={() => {
-            setSelectedResident(null);
-            setDialogOpen(true);
-          }}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Resident
-        </Button>
-      </div>
-      <div className="overflow-x-auto rounded-md border">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id} colSpan={header.colSpan} className={cn(header.column.columnDef.meta?.className, header.column.columnDef.meta?.thClassName)}>
-                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                    </TableHead>
-                  );
-                })}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className={cn(cell.column.columnDef.meta?.className, cell.column.columnDef.meta?.tdClassName)}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+          <div className="flex items-center justify-between gap-3">
+            <DataTableToolbar
+              table={table}
+              searchPlaceholder="Filter by house no, owner name, or vehicle plate..."
+              filters={[
+                {
+                  columnId: "houseType",
+                  title: "House Type",
+                  options: houseTypes,
+                },
+              ]}
+            />
+            <Button
+              onClick={() => {
+                setSelectedResident(null);
+                setDialogOpen(true);
+              }}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Resident
+            </Button>
+          </div>
+          <div className="overflow-x-auto rounded-md border">
+            <Table>
+              <TableHeader>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => {
+                      return (
+                        <TableHead key={header.id} colSpan={header.colSpan} className={cn(header.column.columnDef.meta?.className, header.column.columnDef.meta?.thClassName)}>
+                          {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                        </TableHead>
+                      );
+                    })}
+                  </TableRow>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows?.length ? (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id} className={cn(cell.column.columnDef.meta?.className, cell.column.columnDef.meta?.tdClassName)}>
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={columns.length} className="h-24 text-center">
+                      No results.
                     </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No results.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-      <DataTablePagination table={table} className="mt-auto" />
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          <DataTablePagination table={table} className="mt-auto" />
+        </CardContent>
+      </Card>
 
       <ResidentDialog open={dialogOpen} onOpenChange={setDialogOpen} resident={selectedResident} onSubmit={handleSubmit} isLoading={isSubmitting} />
 
@@ -339,6 +344,6 @@ export function TasksTable({ data }: DataTableProps) {
         onConfirm={handleDeleteConfirm}
         isLoading={deleteResidentMutation.isPending}
       />
-    </div>
+    </>
   );
 }

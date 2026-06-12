@@ -35,7 +35,7 @@ export function Users() {
         </div>
       </Header>
 
-      <Main className="flex flex-1 flex-col gap-4 sm:gap-6">
+      <Main className="flex flex-1 flex-col gap-6">
         <PageIntro
           title="Users"
           subtitle="Manage users, roles, approvals, and invite codes."

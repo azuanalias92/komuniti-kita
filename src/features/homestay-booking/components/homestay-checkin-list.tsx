@@ -6,10 +6,12 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
+import { PageIntro } from "@/components/layout/page-intro";
 import { Search } from "@/components/search";
 import { ThemeSwitch } from "@/components/theme-switch";
 import { ConfigDrawer } from "@/components/config-drawer";
 import { ProfileDropdown } from "@/components/profile-dropdown";
+import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -164,66 +166,70 @@ export function HomestayCheckinList() {
         </div>
       </Header>
 
-      <Main className="flex flex-1 flex-col gap-4 sm:gap-6">
-        <div className="flex flex-wrap items-end justify-between gap-2">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
+      <Main className="flex flex-1 flex-col gap-6">
+        <PageIntro
+          title={`Homestay ${homestayId}`}
+          subtitle="Review the full check-in history for this homestay."
+          actions={
+            <>
               <Button asChild variant="outline" size="sm">
                 <Link to="/homestay">
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Back
                 </Link>
               </Button>
-            </div>
-            <h2 className="text-2xl font-bold tracking-tight">Homestay {homestayId} - Check-in History</h2>
-            <p className="text-muted-foreground">All check-in records for this homestay.</p>
-          </div>
-          <Button asChild>
-            <Link to="/homestay/$homestayId" params={{ homestayId }}>
-              New Check-in
-            </Link>
-          </Button>
-        </div>
+              <Button asChild>
+                <Link to="/homestay/$homestayId" params={{ homestayId }}>
+                  New Check-in
+                </Link>
+              </Button>
+            </>
+          }
+        />
 
         {isLoading && <div className="text-muted-foreground">Loading check-ins...</div>}
         {error && <div className="text-destructive">{(error as Error).message}</div>}
         {!isLoading && checkins.length === 0 && <div className="text-muted-foreground">No check-ins found for this homestay.</div>}
         {checkins.length > 0 && (
-          <div className="overflow-hidden rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Person in Charge</TableHead>
-                  <TableHead>Guests</TableHead>
-                  <TableHead>Arrival</TableHead>
-                  <TableHead>Departure</TableHead>
-                  <TableHead>Plates</TableHead>
-                  <TableHead>Notes</TableHead>
-                  <TableHead>Submitted At</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {checkins.map((checkin) => (
-                  <TableRow key={checkin.id}>
-                    <TableCell className="font-medium">{checkin.personInCharge}</TableCell>
-                    <TableCell>{checkin.numberOfGuests}</TableCell>
-                    <TableCell>{checkin.dateOfArrival ? format(new Date(checkin.dateOfArrival), "dd/MM/yyyy") : "-"}</TableCell>
-                    <TableCell>{checkin.dateOfDeparture ? format(new Date(checkin.dateOfDeparture), "dd/MM/yyyy") : "-"}</TableCell>
-                    <TableCell>{checkin.numberPlates?.length ? checkin.numberPlates.join(", ") : "-"}</TableCell>
-                    <TableCell className="max-w-xs truncate">{checkin.additionalNotes || "-"}</TableCell>
-                    <TableCell>{format(new Date(checkin.submittedAt), "dd/MM/yyyy HH:mm")}</TableCell>
-                    <TableCell>
-                      <Button variant="outline" size="sm" onClick={() => handleEditClick(checkin)}>
-                        <Pencil className="h-4 w-4 mr-1" />
-                        Edit
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <Card>
+            <CardContent className="p-6">
+              <div className="overflow-hidden rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Person in Charge</TableHead>
+                      <TableHead>Guests</TableHead>
+                      <TableHead>Arrival</TableHead>
+                      <TableHead>Departure</TableHead>
+                      <TableHead>Plates</TableHead>
+                      <TableHead>Notes</TableHead>
+                      <TableHead>Submitted At</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {checkins.map((checkin) => (
+                      <TableRow key={checkin.id}>
+                        <TableCell className="font-medium">{checkin.personInCharge}</TableCell>
+                        <TableCell>{checkin.numberOfGuests}</TableCell>
+                        <TableCell>{checkin.dateOfArrival ? format(new Date(checkin.dateOfArrival), "dd/MM/yyyy") : "-"}</TableCell>
+                        <TableCell>{checkin.dateOfDeparture ? format(new Date(checkin.dateOfDeparture), "dd/MM/yyyy") : "-"}</TableCell>
+                        <TableCell>{checkin.numberPlates?.length ? checkin.numberPlates.join(", ") : "-"}</TableCell>
+                        <TableCell className="max-w-xs truncate">{checkin.additionalNotes || "-"}</TableCell>
+                        <TableCell>{format(new Date(checkin.submittedAt), "dd/MM/yyyy HH:mm")}</TableCell>
+                        <TableCell>
+                          <Button variant="outline" size="sm" onClick={() => handleEditClick(checkin)}>
+                            <Pencil className="h-4 w-4 mr-1" />
+                            Edit
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* Edit Dialog */}

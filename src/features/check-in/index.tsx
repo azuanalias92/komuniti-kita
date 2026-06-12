@@ -199,7 +199,7 @@ export function CheckIn() {
           <ProfileDropdown />
         </div>
       </Header>
-      <Main className="flex flex-1 flex-col gap-6 sm:gap-8">
+      <Main className="flex flex-1 flex-col gap-6">
         <PageIntro
           title="Check In"
           subtitle="Check in from your current location."

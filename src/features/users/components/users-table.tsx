@@ -13,6 +13,7 @@ import {
 } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
 import { type NavigateFn, useTableUrlState } from "@/hooks/use-table-url-state";
+import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DataTablePagination, DataTableToolbar } from "@/components/data-table";
 import { useUsersContext } from "./users-provider";
@@ -126,87 +127,89 @@ export function UsersTable({ data, search, navigate }: DataTableProps) {
   }
 
   return (
-    <div
+    <Card
       className={cn(
-        'max-sm:has-[div[role="toolbar"]]:mb-16', // Add margin bottom to the table on mobile when the toolbar is visible
-        "flex flex-1 flex-col gap-4"
+        'max-sm:has-[div[role="toolbar"]]:mb-16',
+        "flex flex-1 flex-col"
       )}
     >
-      <DataTableToolbar
-        table={table}
-        searchPlaceholder="Filter users..."
-        searchKey="username"
-        filters={[
-          {
-            columnId: "status",
-            title: "Status",
-            options: [
-              { label: "Active", value: "active" },
-              { label: "Inactive", value: "inactive" },
-              { label: "Invited", value: "invited" },
-              { label: "Suspended", value: "suspended" },
-            ],
-          },
-          {
-            columnId: "role",
-            title: "Role",
-            options: roleOptions,
-          },
-        ]}
-      />
-      <div className="overflow-x-auto rounded-md border">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="group/row">
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead
-                      key={header.id}
-                      colSpan={header.colSpan}
-                      className={cn(
-                        "bg-background group-hover/row:bg-muted group-data-[state=selected]/row:bg-muted",
-                        header.column.columnDef.meta?.className,
-                        header.column.columnDef.meta?.thClassName
-                      )}
-                    >
-                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                    </TableHead>
-                  );
-                })}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} data-state={row.getIsSelected() && "selected"} className="group/row">
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell
-                      key={cell.id}
-                      className={cn(
-                        "bg-background group-hover/row:bg-muted group-data-[state=selected]/row:bg-muted",
-                        cell.column.columnDef.meta?.className,
-                        cell.column.columnDef.meta?.tdClassName
-                      )}
-                    >
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
+      <CardContent className="flex flex-1 flex-col gap-4 p-6">
+        <DataTableToolbar
+          table={table}
+          searchPlaceholder="Filter users..."
+          searchKey="username"
+          filters={[
+            {
+              columnId: "status",
+              title: "Status",
+              options: [
+                { label: "Active", value: "active" },
+                { label: "Inactive", value: "inactive" },
+                { label: "Invited", value: "invited" },
+                { label: "Suspended", value: "suspended" },
+              ],
+            },
+            {
+              columnId: "role",
+              title: "Role",
+              options: roleOptions,
+            },
+          ]}
+        />
+        <div className="overflow-x-auto rounded-md border">
+          <Table>
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id} className="group/row">
+                  {headerGroup.headers.map((header) => {
+                    return (
+                      <TableHead
+                        key={header.id}
+                        colSpan={header.colSpan}
+                        className={cn(
+                          "bg-background group-hover/row:bg-muted group-data-[state=selected]/row:bg-muted",
+                          header.column.columnDef.meta?.className,
+                          header.column.columnDef.meta?.thClassName
+                        )}
+                      >
+                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                      </TableHead>
+                    );
+                  })}
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No results.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-      <DataTablePagination table={table} className="mt-auto" />
-      {canDelete && <DataTableBulkActions table={table} />}
-    </div>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow key={row.id} data-state={row.getIsSelected() && "selected"} className="group/row">
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell
+                        key={cell.id}
+                        className={cn(
+                          "bg-background group-hover/row:bg-muted group-data-[state=selected]/row:bg-muted",
+                          cell.column.columnDef.meta?.className,
+                          cell.column.columnDef.meta?.tdClassName
+                        )}
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={columns.length} className="h-24 text-center">
+                    No results.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+        <DataTablePagination table={table} className="mt-auto" />
+        {canDelete && <DataTableBulkActions table={table} />}
+      </CardContent>
+    </Card>
   );
 }

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Building2, Plus } from 'lucide-react'
+import { Building2, Pencil, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -70,6 +70,7 @@ export function Tenants() {
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [editingTenant, setEditingTenant] = useState<Tenant | null>(null)
 
   const form = useForm<z.infer<typeof createTenantSchema>>({
     resolver: zodResolver(createTenantSchema),
@@ -97,27 +98,64 @@ export function Tenants() {
     void loadTenants()
   }, [])
 
+  function handleDialogOpenChange(nextOpen: boolean) {
+    setOpen(nextOpen)
+    if (!nextOpen) {
+      setEditingTenant(null)
+      form.reset({ name: '', slug: '' })
+    }
+  }
+
+  function handleCreateOpen() {
+    setEditingTenant(null)
+    form.reset({ name: '', slug: '' })
+    setOpen(true)
+  }
+
+  function handleEditOpen(tenant: Tenant) {
+    setEditingTenant(tenant)
+    form.reset({ name: tenant.name, slug: tenant.slug })
+    setOpen(true)
+  }
+
   async function onSubmit(values: z.infer<typeof createTenantSchema>) {
     setIsSubmitting(true)
     try {
       const res = await fetch('/api/tenants', {
-        method: 'POST',
+        method: editingTenant ? 'PUT' : 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(values),
+        body: JSON.stringify(editingTenant ? { id: editingTenant.id, ...values } : values),
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) {
         if (json.error === 'slug_exists') {
           throw new Error('Slug already exists. Please use a different slug.')
         }
+        if (json.error === 'tenant_not_found') {
+          throw new Error('Tenant not found.')
+        }
         throw new Error(json.error || 'Failed to create tenant')
       }
-      setTenants((current) => [json as Tenant, ...current])
-      toast.success('Tenant created')
-      form.reset()
+      if (editingTenant) {
+        setTenants((current) =>
+          current.map((tenant) => (tenant.id === editingTenant.id ? (json as Tenant) : tenant))
+        )
+        toast.success('Tenant updated')
+      } else {
+        setTenants((current) => [json as Tenant, ...current])
+        toast.success('Tenant created')
+      }
+      setEditingTenant(null)
+      form.reset({ name: '', slug: '' })
       setOpen(false)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create tenant')
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : editingTenant
+            ? 'Failed to update tenant'
+            : 'Failed to create tenant'
+      )
     } finally {
       setIsSubmitting(false)
     }
@@ -134,13 +172,13 @@ export function Tenants() {
         </div>
       </Header>
 
-      <Main className='flex flex-1 flex-col gap-4 sm:gap-6'>
+      <Main className='flex flex-1 flex-col gap-6'>
         <PageIntro
           title='Tenants'
-          subtitle='View and create communities.'
+          subtitle='View, create, and update communities.'
           actions={
             isSuperAdmin ? (
-              <Button className='space-x-1' onClick={() => setOpen(true)}>
+              <Button className='space-x-1' onClick={handleCreateOpen}>
                 <span>Add Tenant</span>
                 <Plus size={18} />
               </Button>
@@ -165,16 +203,17 @@ export function Tenants() {
                   <TableHead>Active Invites</TableHead>
                   <TableHead>Pending Approvals</TableHead>
                   <TableHead>Created</TableHead>
+                  {isSuperAdmin ? <TableHead className='text-right'>Actions</TableHead> : null}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={6}>Loading tenants...</TableCell>
+                    <TableCell colSpan={isSuperAdmin ? 7 : 6}>Loading tenants...</TableCell>
                   </TableRow>
                 ) : tenants.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6}>No tenants found yet.</TableCell>
+                    <TableCell colSpan={isSuperAdmin ? 7 : 6}>No tenants found yet.</TableCell>
                   </TableRow>
                 ) : (
                   tenants.map((tenant) => (
@@ -185,6 +224,14 @@ export function Tenants() {
                       <TableCell>{tenant.invitesCount}</TableCell>
                       <TableCell>{tenant.pendingApprovalsCount}</TableCell>
                       <TableCell>{formatDate(tenant.createdAt)}</TableCell>
+                      {isSuperAdmin ? (
+                        <TableCell className='text-right'>
+                          <Button variant='outline' size='sm' onClick={() => handleEditOpen(tenant)}>
+                            <Pencil className='mr-2 size-4' />
+                            Edit
+                          </Button>
+                        </TableCell>
+                      ) : null}
                     </TableRow>
                   ))
                 )}
@@ -194,12 +241,14 @@ export function Tenants() {
         </Card>
       </Main>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={handleDialogOpenChange}>
         <DialogContent className='sm:max-w-lg'>
           <DialogHeader>
-            <DialogTitle>Create Tenant</DialogTitle>
+            <DialogTitle>{editingTenant ? 'Edit Tenant' : 'Create Tenant'}</DialogTitle>
             <DialogDescription>
-              Add a new community tenant. Leave slug empty to auto-generate it from the name.
+              {editingTenant
+                ? 'Update the tenant name and slug.'
+                : 'Add a new community tenant. Leave slug empty to auto-generate it from the name.'}
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
@@ -231,11 +280,21 @@ export function Tenants() {
                 )}
               />
               <DialogFooter>
-                <Button type='button' variant='outline' onClick={() => setOpen(false)}>
+                <Button
+                  type='button'
+                  variant='outline'
+                  onClick={() => handleDialogOpenChange(false)}
+                >
                   Cancel
                 </Button>
                 <Button type='submit' disabled={isSubmitting}>
-                  {isSubmitting ? 'Creating...' : 'Create Tenant'}
+                  {isSubmitting
+                    ? editingTenant
+                      ? 'Saving...'
+                      : 'Creating...'
+                    : editingTenant
+                      ? 'Save Changes'
+                      : 'Create Tenant'}
                 </Button>
               </DialogFooter>
             </form>

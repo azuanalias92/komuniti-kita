@@ -191,3 +191,104 @@ export async function onRequestPost({ request, env }: { request: Request; env: {
     }
   )
 }
+
+export async function onRequestPut({ request, env }: { request: Request; env: { DB: any } }) {
+  if (!isSuperAdmin(request)) {
+    return new Response(JSON.stringify({ error: 'forbidden' }), {
+      status: 403,
+      headers: { 'content-type': 'application/json' },
+    })
+  }
+
+  await ensureSchema(env.DB)
+
+  const body = await request.json().catch(() => ({} as any))
+  const id = typeof body.id === 'string' ? body.id.trim() : ''
+  const name = typeof body.name === 'string' ? body.name.trim() : ''
+  const rawSlug = typeof body.slug === 'string' ? body.slug.trim() : ''
+  const slug = slugify(rawSlug || name)
+
+  if (!id) {
+    return new Response(JSON.stringify({ error: 'id_required' }), {
+      status: 400,
+      headers: { 'content-type': 'application/json' },
+    })
+  }
+
+  if (!name) {
+    return new Response(JSON.stringify({ error: 'name_required' }), {
+      status: 400,
+      headers: { 'content-type': 'application/json' },
+    })
+  }
+
+  if (!slug) {
+    return new Response(JSON.stringify({ error: 'slug_required' }), {
+      status: 400,
+      headers: { 'content-type': 'application/json' },
+    })
+  }
+
+  const existingTenant = await env.DB.prepare(
+    `SELECT id, created_at, COALESCE(updated_at, created_at) as updated_at FROM tenants WHERE id = ? LIMIT 1`
+  ).bind(id).first()
+
+  if (!existingTenant) {
+    return new Response(JSON.stringify({ error: 'tenant_not_found' }), {
+      status: 404,
+      headers: { 'content-type': 'application/json' },
+    })
+  }
+
+  const existingSlug = await env.DB.prepare(
+    `SELECT id FROM tenants WHERE lower(slug) = lower(?) AND id != ? LIMIT 1`
+  ).bind(slug, id).first()
+
+  if (existingSlug) {
+    return new Response(JSON.stringify({ error: 'slug_exists' }), {
+      status: 409,
+      headers: { 'content-type': 'application/json' },
+    })
+  }
+
+  const now = new Date().toISOString()
+  await env.DB.prepare(
+    `UPDATE tenants
+     SET name = ?, slug = ?, updated_at = ?
+     WHERE id = ?`
+  ).bind(name, slug, now, id).run()
+
+  const countsSql = `
+    SELECT
+      COALESCE((
+        SELECT COUNT(*) FROM users u
+        WHERE u.tenant_id = ?
+      ), 0) AS users_count,
+      COALESCE((
+        SELECT COUNT(*) FROM tenant_invites i
+        WHERE i.tenant_id = ? AND COALESCE(i.is_active, 1) = 1
+      ), 0) AS invites_count,
+      COALESCE((
+        SELECT COUNT(*) FROM pending_approvals p
+        WHERE p.tenant_id = ? AND p.status = 'pending'
+      ), 0) AS pending_approvals_count
+  `
+
+  const counts = await env.DB.prepare(countsSql).bind(id, id, id).first()
+
+  return new Response(
+    JSON.stringify({
+      id,
+      name,
+      slug,
+      createdAt: String((existingTenant as any).created_at || ''),
+      updatedAt: now,
+      usersCount: Number((counts as any)?.users_count || 0),
+      invitesCount: Number((counts as any)?.invites_count || 0),
+      pendingApprovalsCount: Number((counts as any)?.pending_approvals_count || 0),
+    }),
+    {
+      headers: { 'content-type': 'application/json' },
+    }
+  )
+}
