@@ -18,6 +18,28 @@ INSERT OR IGNORE INTO tenants (id, name, slug, settings, created_at, updated_at)
 VALUES ('default', 'KomunitiKita', 'komuniti-kita', '{}', datetime('now'), datetime('now'));
 
 -- ============================================================
+-- TENANT INVITES
+-- ============================================================
+CREATE TABLE IF NOT EXISTS tenant_invites (
+  id TEXT PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
+  code TEXT UNIQUE NOT NULL,
+  description TEXT DEFAULT '',
+  created_by TEXT,
+  max_uses INTEGER DEFAULT 0,
+  use_count INTEGER DEFAULT 0,
+  expires_at TEXT,
+  is_active INTEGER DEFAULT 1,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_invites_code ON tenant_invites(code);
+CREATE INDEX IF NOT EXISTS idx_invites_tenant ON tenant_invites(tenant_id);
+
+INSERT OR IGNORE INTO tenant_invites (id, tenant_id, code, description, created_by, created_at, updated_at)
+VALUES ('default-invite', 'default', 'KOMUNITI', 'Default community invite', 'system', datetime('now'), datetime('now'));
+
+-- ============================================================
 -- USERS (now scoped per tenant)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS users (

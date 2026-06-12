@@ -53,6 +53,13 @@ export function SignIn() {
               >
                 Sign up
               </a>
+              {' or '}
+              <a
+                href='/join'
+                className='hover:text-primary underline underline-offset-4'
+              >
+                Join with code
+              </a>
             </p>
           </div>
         </CardFooter>

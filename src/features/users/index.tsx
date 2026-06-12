@@ -8,6 +8,7 @@ import { ThemeSwitch } from "@/components/theme-switch";
 import { UsersDialogs } from "./components/users-dialogs";
 import { UsersProvider } from "./components/users-provider";
 import { UsersTable } from "./components/users-table";
+import { InviteManagement } from "./components/invite-management";
 import { Button } from "@/components/ui/button";
 import { UserPlus } from "lucide-react";
 import { useUsersContext } from "./components/users-provider";
@@ -41,6 +42,7 @@ export function Users() {
           {canCreate && <AddUserButton />}
         </div>
         <UsersTable search={search} navigate={navigate} />
+        <InviteManagement />
       </Main>
 
       <UsersDialogs />
