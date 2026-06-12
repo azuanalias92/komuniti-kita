@@ -185,8 +185,8 @@ export async function onRequestGet({ request, env }: { request: Request; env: { 
     // Pending approval — tell user to wait
     redirectUrl = `${origin}/sign-in?error=approval_pending`
   } else {
-    // First time — user needs an invite code. Redirect to join page
-    redirectUrl = `${origin}/join?email=${encodeURIComponent(userEmail)}&name=${encodeURIComponent(userName)}`
+    // First time — user needs an invite code. Redirect back to sign-in with invite code form
+    redirectUrl = `${origin}/sign-in?new_user=true&email=${encodeURIComponent(userEmail)}&name=${encodeURIComponent(userName)}`
   }
 
   const clearHeaders = new Headers({ Location: redirectUrl })
