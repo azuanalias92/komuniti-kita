@@ -44,8 +44,7 @@ const queryClient = new QueryClient({
           case 401:
             toast.error("Session expired!");
             useAuthStore.getState().auth.reset();
-            const redirect = `${router.history.location.href}`;
-            router.navigate({ to: "/sign-in", search: { redirect } });
+            router.navigate({ to: "/sign-in" });
             break;
 
           case 500:

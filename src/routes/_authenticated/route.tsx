@@ -7,7 +7,7 @@ export const Route = createFileRoute('/_authenticated')({
   beforeLoad: async ({ location }) => {
     const { user, accessToken } = useAuthStore.getState().auth
     if (!user || !accessToken) {
-      throw redirect({ to: '/sign-in', search: { redirect: location.href } })
+      throw redirect({ to: '/sign-in' })
     }
 
     // Load ACL permissions for the user's role

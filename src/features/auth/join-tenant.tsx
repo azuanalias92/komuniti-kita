@@ -7,17 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { PasswordInput } from '@/components/password-input'
 import { SendHorizonal } from 'lucide-react'
 
 const formSchema = z.object({
   inviteCode: z.string().min(1, 'Invite code is required'),
   email: z.string().email('Please enter a valid email'),
-  password: z.string().min(7, 'Password must be at least 7 characters'),
-  confirmPassword: z.string().min(1, 'Please confirm your password'),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ['confirmPassword'],
 })
 
 export function JoinTenantPage() {
@@ -25,27 +19,33 @@ export function JoinTenantPage() {
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [tenantName, setTenantName] = useState('')
 
+  const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams()
+  const prefilledEmail = urlParams.get('email') || ''
+  const prefilledName = urlParams.get('name') || ''
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       inviteCode: '',
-      email: '',
-      password: '',
-      confirmPassword: '',
+      email: prefilledEmail,
     },
   })
 
   async function onSubmit(data: z.infer<typeof formSchema>) {
     setIsLoading(true)
     const p = (async () => {
+      const body: Record<string, string> = {
+        inviteCode: data.inviteCode,
+        email: data.email,
+      }
+      if (prefilledName) {
+        body.name = prefilledName
+      }
+
       const res = await fetch('/api/auth/join', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          inviteCode: data.inviteCode,
-          email: data.email,
-          password: data.password,
-        }),
+        body: JSON.stringify(body),
       })
 
       const json = await res.json().catch(() => ({}))
@@ -119,6 +119,13 @@ export function JoinTenantPage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              {prefilledName && (
+                <div className="rounded-md bg-muted p-3 text-sm">
+                  Signed in as <strong>{prefilledEmail}</strong>
+                  {prefilledName && <> ({prefilledName})</>}
+                </div>
+              )}
+
               <FormField
                 control={form.control}
                 name="inviteCode"
@@ -146,34 +153,6 @@ export function JoinTenantPage() {
                     <FormLabel>Email</FormLabel>
                     <FormControl>
                       <Input type="email" placeholder="your@email.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <PasswordInput placeholder="Create a password" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="confirmPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Confirm Password</FormLabel>
-                    <FormControl>
-                      <PasswordInput placeholder="Confirm your password" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
