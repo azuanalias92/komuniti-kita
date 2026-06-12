@@ -141,7 +141,7 @@ async function handleCallback({ request, env }: { request: Request; env: { DB: D
     }
 
     const headers = new Headers({ Location: `${origin}/` })
-    headers.append('Set-Cookie', `thisisjustarandomstring=${encodeURIComponent(accessToken)}; Path=/; Max-Age=${60 * 60 * 24 * 7}`)
+    headers.append('Set-Cookie', `thisisjustarandomstring=${encodeURIComponent(JSON.stringify(accessToken))}; Path=/; Max-Age=${60 * 60 * 24 * 7}`)
     headers.append('Set-Cookie', `auth_user=${encodeURIComponent(JSON.stringify(user))}; Path=/; Max-Age=${60 * 60 * 24 * 7}`)
     headers.append('Set-Cookie', 'oauth_state=; Path=/; Max-Age=0')
     headers.append('Set-Cookie', 'oauth_verifier=; Path=/; Max-Age=0')
@@ -200,7 +200,7 @@ async function handleCallback({ request, env }: { request: Request; env: { DB: D
     }
 
     const headers = new Headers({ Location: `${origin}/` })
-    headers.append('Set-Cookie', `thisisjustarandomstring=${encodeURIComponent(accessToken)}; Path=/; Max-Age=${60 * 60 * 24 * 7}`)
+    headers.append('Set-Cookie', `thisisjustarandomstring=${encodeURIComponent(JSON.stringify(accessToken))}; Path=/; Max-Age=${60 * 60 * 24 * 7}`)
     headers.append('Set-Cookie', `auth_user=${encodeURIComponent(JSON.stringify(user))}; Path=/; Max-Age=${60 * 60 * 24 * 7}`)
     headers.append('Set-Cookie', 'oauth_state=; Path=/; Max-Age=0')
     headers.append('Set-Cookie', 'oauth_verifier=; Path=/; Max-Age=0')
