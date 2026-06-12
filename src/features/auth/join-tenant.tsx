@@ -2,15 +2,13 @@ import { useState } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
-import { useAuthStore } from '@/stores/auth-store'
-import { syncTenantAfterAuth } from '@/lib/api'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/password-input'
+import { CheckCircle2, SendHorizonal } from 'lucide-react'
 
 const formSchema = z.object({
   inviteCode: z.string().min(1, 'Invite code is required'),
@@ -24,8 +22,8 @@ const formSchema = z.object({
 
 export function JoinTenantPage() {
   const [isLoading, setIsLoading] = useState(false)
-  const navigate = useNavigate()
-  const { auth } = useAuthStore()
+  const [isSubmitted, setIsSubmitted] = useState(false)
+  const [tenantName, setTenantName] = useState('')
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -50,27 +48,26 @@ export function JoinTenantPage() {
         }),
       })
 
+      const json = await res.json().catch(() => ({}))
+
       if (!res.ok) {
-        const json = await res.json().catch(() => ({}))
         const msg = json.error || 'Failed to join'
         if (msg === 'invalid_invite_code') throw new Error('Invalid invite code. Please check and try again.')
         if (msg === 'invite_code_disabled') throw new Error('This invite code has been disabled.')
         if (msg === 'invite_code_expired') throw new Error('This invite code has expired.')
         if (msg === 'invite_code_exhausted') throw new Error('This invite code has reached its usage limit.')
         if (msg === 'user_already_in_tenant') throw new Error('You already have an account in this community.')
+        if (msg === 'approval_already_pending') throw new Error('You already have a pending request for this community. Please wait for admin approval.')
         throw new Error(msg)
       }
 
-      const json = await res.json()
-      auth.setUser(json.user)
-      auth.setAccessToken(json.accessToken)
-      syncTenantAfterAuth()
-      navigate({ to: '/', replace: true })
-      return `Welcome to ${json.user?.tenantName || 'your community'}!`
+      setTenantName(json.tenantName || 'the community')
+      setIsSubmitted(true)
+      return 'Request submitted! An admin will review your request shortly.'
     })()
 
     toast.promise(p, {
-      loading: 'Joining community...',
+      loading: 'Submitting request...',
       success: (msg) => {
         setIsLoading(false)
         return msg
@@ -82,13 +79,41 @@ export function JoinTenantPage() {
     })
   }
 
+  if (isSubmitted) {
+    return (
+      <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="py-12">
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+                <SendHorizonal className="h-8 w-8 text-green-600" />
+              </div>
+              <h2 className="text-xl font-semibold">Request Submitted!</h2>
+              <p className="text-muted-foreground">
+                Your request to join <strong>{tenantName}</strong> has been sent to the admin for review.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                You'll be able to sign in once your request is approved. Check your email for updates.
+              </p>
+              <div className="pt-4">
+                <Button asChild variant="outline">
+                  <a href="/sign-in">Go to Sign In</a>
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold">Join a Community</CardTitle>
           <CardDescription>
-            Enter your invite code to join an existing community
+            Enter your invite code to request access to an existing community
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -156,7 +181,7 @@ export function JoinTenantPage() {
               />
 
               <Button type="submit" disabled={isLoading} className="w-full">
-                {isLoading ? 'Joining...' : 'Join Community'}
+                {isLoading ? 'Submitting...' : 'Request to Join'}
               </Button>
 
               <p className="text-center text-sm text-muted-foreground">

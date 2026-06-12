@@ -40,6 +40,24 @@ INSERT OR IGNORE INTO tenant_invites (id, tenant_id, code, description, created_
 VALUES ('default-invite', 'default', 'KOMUNITI', 'Default community invite', 'system', datetime('now'), datetime('now'));
 
 -- ============================================================
+-- PENDING APPROVALS (users requesting to join a tenant)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS pending_approvals (
+  id TEXT PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
+  invite_code TEXT NOT NULL,
+  email TEXT NOT NULL,
+  password_hash TEXT NOT NULL,
+  username TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  reviewed_by TEXT,
+  reviewed_at TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_approvals_tenant ON pending_approvals(tenant_id, status);
+
+-- ============================================================
 -- USERS (now scoped per tenant)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS users (

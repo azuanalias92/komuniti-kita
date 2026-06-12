@@ -83,6 +83,34 @@ export async function onRequestPost({ request, env }: { request: Request; env: {
   let row = (await env.DB.prepare(selectSql).bind(email).first()) as Record<string, unknown> | null;
 
   if (!row) {
+    // Check if user has a pending approval
+    await env.DB.prepare(
+      `CREATE TABLE IF NOT EXISTS pending_approvals (
+        id TEXT PRIMARY KEY,
+        tenant_id TEXT NOT NULL,
+        invite_code TEXT NOT NULL,
+        email TEXT NOT NULL,
+        password_hash TEXT NOT NULL,
+        username TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        reviewed_by TEXT,
+        reviewed_at TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )`
+    ).run();
+
+    const pending = await env.DB.prepare(
+      `SELECT id, status FROM pending_approvals WHERE email = ? AND status = 'pending'`
+    ).bind(email).first() as Record<string, unknown> | null;
+
+    if (pending) {
+      return new Response(JSON.stringify({ error: 'approval_pending' }), {
+        status: 403,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+
     // Auto-create user with default tenant
     const tenantId = "default";
     await env.DB.prepare(

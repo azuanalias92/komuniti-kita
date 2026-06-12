@@ -1,6 +1,6 @@
-import { sha256, generateToken } from '../_lib/auth';
+import { sha256 } from '../_lib/auth';
 
-export async function onRequestPost({ request, env }: { request: Request; env: { DB: D1Database; JWT_SECRET?: string } }) {
+export async function onRequestPost({ request, env }: { request: Request; env: { DB: D1Database } }) {
   const contentType = request.headers.get('content-type') || '';
   if (!contentType.includes('application/json')) {
     return new Response(JSON.stringify({ error: 'invalid_content_type' }), {
@@ -22,7 +22,7 @@ export async function onRequestPost({ request, env }: { request: Request; env: {
   }
 
   try {
-    // Ensure schema
+    // Ensure schemas
     await env.DB.prepare(
       `CREATE TABLE IF NOT EXISTS tenant_invites (
         id TEXT PRIMARY KEY,
@@ -34,6 +34,22 @@ export async function onRequestPost({ request, env }: { request: Request; env: {
         use_count INTEGER DEFAULT 0,
         expires_at TEXT,
         is_active INTEGER DEFAULT 1,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )`
+    ).run();
+
+    await env.DB.prepare(
+      `CREATE TABLE IF NOT EXISTS pending_approvals (
+        id TEXT PRIMARY KEY,
+        tenant_id TEXT NOT NULL,
+        invite_code TEXT NOT NULL,
+        email TEXT NOT NULL,
+        password_hash TEXT NOT NULL,
+        username TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        reviewed_by TEXT,
+        reviewed_at TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       )`
@@ -86,7 +102,7 @@ export async function onRequestPost({ request, env }: { request: Request; env: {
       `SELECT name, slug FROM tenants WHERE id = ?`
     ).bind(tenantId).first() as { name: string; slug: string } | null;
 
-    // Ensure users table
+    // Ensure users table exists for the duplicate check
     await env.DB.prepare(
       `CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY,
@@ -118,45 +134,53 @@ export async function onRequestPost({ request, env }: { request: Request; env: {
       });
     }
 
-    // Create user in this tenant
-    const userId = crypto.randomUUID();
+    // Check if there's already a pending approval for this email + tenant
+    const existingRequest = await env.DB.prepare(
+      `SELECT id, status FROM pending_approvals WHERE tenant_id = ? AND email = ?`
+    ).bind(tenantId, email).first() as Record<string, unknown> | null;
+
+    if (existingRequest) {
+      const status = String(existingRequest.status || '');
+      if (status === 'pending') {
+        return new Response(JSON.stringify({ error: 'approval_already_pending' }), {
+          status: 409,
+          headers: { 'content-type': 'application/json' },
+        });
+      }
+      // If rejected, allow re-requesting
+      if (status === 'rejected') {
+        // Update the existing request
+        const username = email.split('@')[0];
+        const now = new Date().toISOString();
+        const passwordHash = await sha256(password);
+        await env.DB.prepare(
+          `UPDATE pending_approvals SET status = 'pending', password_hash = ?, username = ?, updated_at = ?, reviewed_by = NULL, reviewed_at = NULL WHERE id = ?`
+        ).bind(passwordHash, username, now, String(existingRequest.id)).run();
+
+        return new Response(JSON.stringify({
+          message: 'request_submitted',
+          tenantName: tenant?.name || 'Community',
+        }), {
+          headers: { 'content-type': 'application/json' },
+        });
+      }
+    }
+
+    // Create pending approval
+    const id = crypto.randomUUID();
     const username = email.split('@')[0];
     const now = new Date().toISOString();
     const passwordHash = await sha256(password);
+
     await env.DB.prepare(
-      `INSERT INTO users (id, tenant_id, username, email, status, role, password_hash, password_updated_at, created_at, updated_at)
-       VALUES (?, ?, ?, ?, 'active', 'user', ?, ?, ?, ?)`
-    ).bind(userId, tenantId, username, email, passwordHash, now, now, now).run();
+      `INSERT INTO pending_approvals (id, tenant_id, invite_code, email, password_hash, username, status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?)`
+    ).bind(id, tenantId, inviteCode, email, passwordHash, username, now, now).run();
 
-    // Increment invite usage
-    await env.DB.prepare(
-      `UPDATE tenant_invites SET use_count = use_count + 1, updated_at = ? WHERE id = ?`
-    ).bind(now, String(invite.id)).run();
-
-    // Generate token
-    const jwtSecret = env.JWT_SECRET || 'dev-jwt-secret-change-in-production';
-    const accessToken = await generateToken(
-      {
-        sub: userId,
-        email,
-        role: ['user'],
-        tenantId,
-        tenantName: tenant?.name || 'Community',
-      },
-      jwtSecret
-    );
-
-    const user = {
-      accountNo: userId,
-      email,
-      role: ['user'],
-      tenantId,
+    return new Response(JSON.stringify({
+      message: 'request_submitted',
       tenantName: tenant?.name || 'Community',
-      tenantSlug: tenant?.slug || '',
-      exp: Date.now() + 24 * 60 * 60 * 1000,
-    };
-
-    return new Response(JSON.stringify({ user, accessToken }), {
+    }), {
       headers: { 'content-type': 'application/json' },
     });
   } catch (e) {

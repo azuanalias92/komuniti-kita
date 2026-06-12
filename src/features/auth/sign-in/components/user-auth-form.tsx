@@ -61,6 +61,8 @@ export function UserAuthForm({
         body: JSON.stringify({ email: data.email, password: data.password }),
       })
       if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        if (body.error === 'approval_pending') throw new Error('Your request to join is still pending approval. Please wait for an admin to approve your account.')
         throw new Error('invalid')
       }
       const json = await res.json()
