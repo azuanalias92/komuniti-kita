@@ -86,6 +86,7 @@ function PaymentReview() {
             <CardTitle>Pending Payments</CardTitle>
           </CardHeader>
           <CardContent>
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -113,6 +114,7 @@ function PaymentReview() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           </CardContent>
         </Card>
       </Main>

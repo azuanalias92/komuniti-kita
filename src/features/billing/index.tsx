@@ -132,6 +132,7 @@ export function Billing() {
             <CardTitle>House Payments</CardTitle>
           </CardHeader>
           <CardContent>
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -156,6 +157,7 @@ export function Billing() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           </CardContent>
         </Card>
 
@@ -164,6 +166,7 @@ export function Billing() {
             <CardTitle>Payments Details</CardTitle>
           </CardHeader>
           <CardContent>
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -196,6 +199,7 @@ export function Billing() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           </CardContent>
         </Card>
       </Main>

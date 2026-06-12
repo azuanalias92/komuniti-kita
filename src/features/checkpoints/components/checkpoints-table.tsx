@@ -117,7 +117,7 @@ export function CheckpointsTable({ data, search, navigate }: DataTableProps) {
         {isLoading && <div className="text-muted-foreground">Loading checkpoints...</div>}
         {error && <div className="text-destructive">{(error as Error).message}</div>}
         <DataTableToolbar table={table} searchPlaceholder="Filter checkpoints..." searchKey="name" filters={[]} />
-        <div className="overflow-hidden rounded-md border">
+        <div className="overflow-x-auto rounded-md border">
           <Table>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (

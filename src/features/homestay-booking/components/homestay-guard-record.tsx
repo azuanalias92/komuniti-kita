@@ -118,7 +118,7 @@ export function HomestayGuardRecord() {
               {arrivals.length === 0 ? (
                 <div className="text-muted-foreground text-sm">No arrivals scheduled for today.</div>
               ) : (
-                <div className="overflow-hidden rounded-md border">
+                <div className="overflow-x-auto rounded-md border">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -164,7 +164,7 @@ export function HomestayGuardRecord() {
               {staying.length === 0 ? (
                 <div className="text-muted-foreground text-sm">No guests staying today.</div>
               ) : (
-                <div className="overflow-hidden rounded-md border">
+                <div className="overflow-x-auto rounded-md border">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -210,7 +210,7 @@ export function HomestayGuardRecord() {
               {departures.length === 0 ? (
                 <div className="text-muted-foreground text-sm">No departures scheduled for today.</div>
               ) : (
-                <div className="overflow-hidden rounded-md border">
+                <div className="overflow-x-auto rounded-md border">
                   <Table>
                     <TableHeader>
                       <TableRow>

@@ -97,7 +97,7 @@ export function HomestayCheckins() {
         {error && <div className="text-destructive">{(error as Error).message}</div>}
         {!isLoading && rows.length === 0 && <div className="text-muted-foreground">No homestays found.</div>}
         {rows.length > 0 && (
-          <div className="overflow-hidden rounded-md border">
+          <div className="overflow-x-auto rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>

@@ -363,68 +363,86 @@ function CheckInReportPanel() {
         const monthCount = group.logs.filter((l) => l.date >= monthCutoff).length;
 
         return (
-          <Card key={group.id} className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">{group.name}</h3>
+          <Card key={group.id}>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-lg">{group.name}</CardTitle>
               <span className="text-sm text-muted-foreground">{group.logs.length} total</span>
-            </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <div className="rounded-lg border p-4">
-                <p className="text-sm text-muted-foreground">Today</p>
-                <p className="text-2xl font-bold">{todayCount}</p>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Today</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-2xl font-bold">{todayCount}</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Last 7 days</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-2xl font-bold">{weekCount}</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Last 30 days</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-2xl font-bold">{monthCount}</p>
+                  </CardContent>
+                </Card>
               </div>
-              <div className="rounded-lg border p-4">
-                <p className="text-sm text-muted-foreground">Last 7 days</p>
-                <p className="text-2xl font-bold">{weekCount}</p>
-              </div>
-              <div className="rounded-lg border p-4">
-                <p className="text-sm text-muted-foreground">Last 30 days</p>
-                <p className="text-2xl font-bold">{monthCount}</p>
-              </div>
-            </div>
+            </CardContent>
           </Card>
         );
       })}
 
-      <Card className="p-6">
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold">Last 30 Days</h3>
-          <p className="text-sm text-muted-foreground">Daily check-ins by user (grouped)</p>
-        </div>
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={dailyData} margin={{ left: 8, right: 8, top: 8, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="day" />
-              <YAxis allowDecimals={false} />
-              <Tooltip />
-              <Legend />
-              {series.map((srs) => (
-                <Bar key={srs.key} dataKey={srs.key} name={srs.name} fill={srs.color} />
-              ))}
-              <Bar dataKey={otherKey} name="Other" fill="var(--chart-5)" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Last 30 Days</CardTitle>
+          <CardDescription>Daily check-ins by user (grouped)</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={dailyData} margin={{ left: 8, right: 8, top: 8, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="day" />
+                <YAxis allowDecimals={false} />
+                <Tooltip />
+                <Legend />
+                {series.map((srs) => (
+                  <Bar key={srs.key} dataKey={srs.key} name={srs.name} fill={srs.color} />
+                ))}
+                <Bar dataKey={otherKey} name="Other" fill="var(--chart-5)" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
       </Card>
 
-      <Card className="p-6">
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold">Top Users (Last 30 Days)</h3>
-          <p className="text-sm text-muted-foreground">Who checked in the most</p>
-        </div>
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={topUsersData} margin={{ left: 8, right: 8, top: 8, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" tick={{ fontSize: 12 }} interval={0} hide={false} />
-              <YAxis allowDecimals={false} />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="value" name="Check-ins" fill="var(--chart-2)" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Top Users (Last 30 Days)</CardTitle>
+          <CardDescription>Who checked in the most</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={topUsersData} margin={{ left: 8, right: 8, top: 8, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" tick={{ fontSize: 12 }} interval={0} hide={false} />
+                <YAxis allowDecimals={false} />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="value" name="Check-ins" fill="var(--chart-2)" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
       </Card>
     </div>
   );
