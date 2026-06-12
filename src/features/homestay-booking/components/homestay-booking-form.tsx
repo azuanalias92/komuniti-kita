@@ -19,8 +19,8 @@ const formSchema = z.object({
   personInCharge: z.string().min(1, "Person in charge is required"),
   numberOfGuests: z.coerce.number().int().min(1, "At least 1 guest").max(20, "Maximum 20 guests"),
   numberPlates: z.string().min(1, "At least one plate number is required"),
-  dateOfArrival: z.date({ required_error: "Arrival date is required" }),
-  dateOfDeparture: z.date({ required_error: "Departure date is required" }),
+  dateOfArrival: z.date({ message: "Arrival date is required" }),
+  dateOfDeparture: z.date({ message: "Departure date is required" }),
   additionalNotes: z.string().optional(),
 });
 
@@ -32,7 +32,7 @@ export function HomestayBookingForm() {
   const [isSuccess, setIsSuccess] = useState(false);
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema) as any,
     defaultValues: {
       personInCharge: "",
       numberOfGuests: undefined as any,

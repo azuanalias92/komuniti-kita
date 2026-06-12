@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/password-input'
-import { CheckCircle2, SendHorizonal } from 'lucide-react'
+import { SendHorizonal } from 'lucide-react'
 
 const formSchema = z.object({
   inviteCode: z.string().min(1, 'Invite code is required'),

@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Building2, Users } from 'lucide-react'
+import { Building2 } from 'lucide-react'
 import { useLayout } from '@/context/layout-provider'
 import { useAuthStore } from '@/stores/auth-store'
 import { useTenantStore } from '@/stores/tenant-store'

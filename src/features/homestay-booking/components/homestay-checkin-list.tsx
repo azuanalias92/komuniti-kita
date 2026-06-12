@@ -80,7 +80,7 @@ export function HomestayCheckinList() {
   type EditFormValues = z.infer<typeof editFormSchema>;
 
   const editFormApi = useForm<EditFormValues>({
-    resolver: zodResolver(editFormSchema),
+    resolver: zodResolver(editFormSchema) as any,
     defaultValues: {
       personInCharge: "",
       numberOfGuests: undefined as any,

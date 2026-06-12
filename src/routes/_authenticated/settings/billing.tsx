@@ -9,7 +9,6 @@ import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { useAuthStore } from "@/stores/auth-store";
 import { ContentSection } from "@/features/settings/components/content-section";
-import { Main } from "@/components/layout/main";
 
 type Settings = { rate: number; frequency: string; qrKey: string | null; bgKey?: string | null; startDate?: string };
 

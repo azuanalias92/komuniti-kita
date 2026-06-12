@@ -1,4 +1,4 @@
-import { LayoutDashboard, Settings, Users, Command, UserCog, Palette, Lock, CheckCircle, MapPin, Home, BookUser, CreditCard } from "lucide-react";
+import { LayoutDashboard, Settings, Users, UserCog, Palette, Lock, CheckCircle, MapPin, Home, BookUser, CreditCard } from "lucide-react";
 import { type SidebarData } from "../types";
 
 export const sidebarData: SidebarData = {

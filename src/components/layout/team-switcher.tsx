@@ -1,11 +1,10 @@
 import * as React from 'react'
-import { ChevronsUpDown, Plus, Building2 } from 'lucide-react'
+import { ChevronsUpDown } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
@@ -15,7 +14,6 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar'
-import { useTenantStore } from '@/stores/tenant-store'
 
 type Team = {
   id: string
@@ -32,7 +30,6 @@ type TeamSwitcherProps = {
 
 export function TeamSwitcher({ teams, activeTeamId, onTeamChange }: TeamSwitcherProps) {
   const { isMobile } = useSidebar()
-  const { addTenant } = useTenantStore()
   const activeTeam = teams.find((t) => t.id === activeTeamId) || teams[0]
 
   if (!activeTeam) return null
