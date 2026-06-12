@@ -12,8 +12,8 @@
     "format": "prettier --write .",
     "knip": "knip",
     "cf:build": "yarn build",
-    "cf:dev": "wrangler pages dev dist",
-    "cf:deploy": "wrangler pages deploy --branch=production",
+    "cf:dev": "wrangler pages deploy --branch=development",
+    "cf:deploy": "wrangler pages deploy",
     "cf:db": "wrangler d1 execute komuniti-kita --remote --file schema.sql",
     "cf:db:local": "wrangler d1 execute komuniti-kita --local --file schema.sql"
   },
