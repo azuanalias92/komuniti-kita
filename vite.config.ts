@@ -21,7 +21,7 @@ export default defineConfig({
       manifest: {
         name: 'KomunitiKita',
         short_name: 'Komuniti',
-        description: 'Admin Dashboard UI built with Shadcn and Vite.',
+        description: 'KomunitiKita is a neighbourhood community platform.',
         theme_color: '#ffffff',
         background_color: '#ffffff',
         display: 'standalone',
