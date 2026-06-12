@@ -47,6 +47,17 @@ async function generateToken(
 }
 
 export async function onRequestGet({ request, env }: { request: Request; env: { DB: D1Database; GOOGLE_CLIENT_ID?: string; GOOGLE_CLIENT_SECRET?: string; JWT_SECRET?: string } }) {
+  try {
+    return await handleCallback({ request, env })
+  } catch (e) {
+    return new Response(`Callback error: ${e instanceof Error ? e.message : String(e)}\n${e instanceof Error ? e.stack : ''}`, {
+      status: 500,
+      headers: { 'content-type': 'text/plain' },
+    })
+  }
+}
+
+async function handleCallback({ request, env }: { request: Request; env: { DB: D1Database; GOOGLE_CLIENT_ID?: string; GOOGLE_CLIENT_SECRET?: string; JWT_SECRET?: string } }) {
   const url = new URL(request.url)
   const origin = url.origin
   const code = url.searchParams.get('code') || ''
