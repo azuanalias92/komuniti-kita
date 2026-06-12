@@ -1,4 +1,4 @@
-import { hasPermission, getTenantId, sha256 } from '../_lib/auth'
+import { hasPermission, getTenantId } from '../_lib/auth'
 
 async function ensureSchema(env: { DB: D1Database }) {
   await env.DB.prepare(
@@ -120,7 +120,6 @@ export async function onRequestPost({ request, env }: { request: Request; env: {
     const body = await request.json().catch(() => ({} as any))
     const username = typeof body.username === 'string' ? body.username.trim() : ''
     const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
-    const password = typeof body.password === 'string' ? body.password : ''
     const firstName = typeof body.firstName === 'string' ? body.firstName.trim() : ''
     const lastName = typeof body.lastName === 'string' ? body.lastName.trim() : ''
     const phoneNumber = typeof body.phoneNumber === 'string' ? body.phoneNumber.trim() : ''
@@ -139,12 +138,6 @@ export async function onRequestPost({ request, env }: { request: Request; env: {
         headers: { 'content-type': 'application/json' },
       })
     }
-    if (!password || password.trim().length < 8) {
-      return new Response(JSON.stringify({ error: 'invalid_password' }), {
-        status: 400,
-        headers: { 'content-type': 'application/json' },
-      })
-    }
 
     const exists = await env.DB.prepare('SELECT id FROM users WHERE tenant_id = ? AND (lower(email) = lower(?) OR lower(username) = lower(?))')
       .bind(tenantId, email, username)
@@ -158,13 +151,12 @@ export async function onRequestPost({ request, env }: { request: Request; env: {
 
     const id = crypto.randomUUID()
     const now = new Date().toISOString()
-    const passwordHash = await sha256(password)
 
     const ok = await env.DB.prepare(
-      `INSERT INTO users (id, tenant_id, username, email, first_name, last_name, phone_number, status, role, password_hash, password_updated_at, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO users (id, tenant_id, username, email, first_name, last_name, phone_number, status, role, password_hash, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)`
     )
-      .bind(id, tenantId, username, email, firstName, lastName, phoneNumber, status, role, passwordHash, now, now, now)
+      .bind(id, tenantId, username, email, firstName, lastName, phoneNumber, status, role, now, now)
       .run()
 
     if (!ok.success) {
