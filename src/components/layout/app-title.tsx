@@ -12,7 +12,7 @@ export function AppTitle() {
         <SidebarMenuButton size="lg" className="gap-0 py-0 hover:bg-transparent active:bg-transparent" asChild>
           <div>
             <Link to="/" onClick={() => setOpenMobile(false)} className="grid flex-1 text-start text-sm leading-tight">
-              <span className="truncate font-bold">Taman Flora Terapung</span>
+              <span className="truncate font-bold">KomunitiKita</span>
             </Link>
             <ToggleSidebar />
           </div>

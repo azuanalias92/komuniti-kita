@@ -9,7 +9,7 @@ export const sidebarData: SidebarData = {
   },
   teams: [
     {
-      name: "Taman Flora Terapung",
+      name: "KomunitiKita",
       logo: Command,
       plan: "Vite + ShadcnUI",
     },

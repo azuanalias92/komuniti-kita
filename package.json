@@ -1,5 +1,5 @@
 {
-  "name": "taman-flora-terapung",
+  "name": "komuniti-kita",
   "private": false,
   "version": "2.2.1",
   "type": "module",
@@ -14,7 +14,7 @@
     "cf:build": "yarn build",
     "cf:dev": "wrangler pages dev dist",
     "cf:deploy": "wrangler pages deploy --branch=production",
-    "cf:db": "wrangler d1 execute taman-flora-terapung --remote --file schema.sql"
+    "cf:db": "wrangler d1 execute komuniti-kita --remote --file schema.sql"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.51.0",

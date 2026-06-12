@@ -19,8 +19,8 @@ export default defineConfig({
       devOptions: { enabled: true },
       includeAssets: ['/images/favicon.svg', '/images/favicon_light.svg'],
       manifest: {
-        name: 'Taman Flora Terapung',
-        short_name: 'Flora',
+        name: 'KomunitiKita',
+        short_name: 'Komuniti',
         description: 'Admin Dashboard UI built with Shadcn and Vite.',
         theme_color: '#ffffff',
         background_color: '#ffffff',

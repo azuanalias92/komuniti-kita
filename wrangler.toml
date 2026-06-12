@@ -1,17 +1,17 @@
-name = "taman-flora-terapung"
+name = "komuniti-kita"
 compatibility_date = "2024-11-01"
 pages_build_output_dir = "dist"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "taman-flora-terapung"
+database_name = "komuniti-kita"
 database_id = "d22e1132-0862-4502-b5a5-74930062fb05"
 
 [[r2_buckets]]
 binding = "R2"
-bucket_name = "taman-flora-terapung"
+bucket_name = "komuniti-kita"
 
 [vars]
 API_BASE = "/api"
-GOOGLE_CLIENT_ID = "71184461214-n2g34k11e0qa0j9a54is52nhhsidoe9n.apps.googleusercontent.com"
-GOOGLE_CLIENT_SECRET = "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"
+GOOGLE_CLIENT_ID = ""
+GOOGLE_CLIENT_SECRET = ""

@@ -1,4 +1,4 @@
-# Taman Flora Terapung
+# KomunitiKita
 
 Admin Dashboard UI built on Shadcn UI and Vite, configured for Cloudflare Pages with D1 and R2.
 
@@ -38,7 +38,7 @@ This project includes Cloudflare Pages Functions and bindings for D1 and R2.
 
 Edit `wrangler.toml`:
 
-- Set `name` to the project slug (already `taman-flora-terapung`).
+- Set `name` to the project slug (already `komuniti-kita`).
 - In `[[d1_databases]]`, set `database_id` to your D1 database ID.
 - In `[[r2_buckets]]`, set `bucket_name` to your R2 bucket name.
 
