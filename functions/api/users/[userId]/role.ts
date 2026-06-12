@@ -1,4 +1,4 @@
-import { hasPermission, getTenantId } from '../_lib/auth'
+import { hasPermission, getTenantId } from '../../_lib/auth'
 
 export async function onRequestPatch({ request, params, env }: {
   request: Request

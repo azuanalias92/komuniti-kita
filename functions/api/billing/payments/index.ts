@@ -1,4 +1,4 @@
-import { hasPermission, getTenantId } from '../_lib/auth'
+import { hasPermission, getTenantId } from '../../_lib/auth'
 
 export async function onRequestGet({ env, request }: { env: { DB: D1Database }; request: Request }) {
   try {

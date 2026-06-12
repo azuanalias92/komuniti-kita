@@ -1,4 +1,4 @@
-import { getTenantId } from '../_lib/auth'
+import { getTenantId } from '../../_lib/auth'
 
 export async function onRequestPut({ env, request, params }: { env: { DB: D1Database }; request: Request; params: { userId: string } }) {
   try {
