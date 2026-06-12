@@ -246,6 +246,7 @@ const AuthenticatedBillingReviewRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
+  '/': typeof AuthenticatedIndexRoute
   '/payment': typeof PaymentRoute
   '/settings': typeof AuthenticatedSettingsRouteRouteWithChildren
   '/forgot-password': typeof authForgotPasswordRoute
@@ -260,7 +261,6 @@ export interface FileRoutesByFullPath {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/homestay/$homestayId': typeof HomestayHomestayIdRoute
-  '/': typeof AuthenticatedIndexRoute
   '/billing/review': typeof AuthenticatedBillingReviewRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/homestay-list/$homestayId': typeof AuthenticatedHomestayListHomestayIdRoute
@@ -271,16 +271,16 @@ export interface FileRoutesByFullPath {
   '/settings/check-in': typeof AuthenticatedSettingsCheckInRoute
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
-  '/billing': typeof AuthenticatedBillingIndexRoute
-  '/check-in-logs': typeof AuthenticatedCheckInLogsIndexRoute
-  '/check-in': typeof AuthenticatedCheckInIndexRoute
-  '/checkpoints': typeof AuthenticatedCheckpointsIndexRoute
-  '/directory': typeof AuthenticatedDirectoryIndexRoute
-  '/homestay-record': typeof AuthenticatedHomestayRecordIndexRoute
-  '/homestay': typeof AuthenticatedHomestayIndexRoute
-  '/roles': typeof AuthenticatedRolesIndexRoute
+  '/billing/': typeof AuthenticatedBillingIndexRoute
+  '/check-in-logs/': typeof AuthenticatedCheckInLogsIndexRoute
+  '/check-in/': typeof AuthenticatedCheckInIndexRoute
+  '/checkpoints/': typeof AuthenticatedCheckpointsIndexRoute
+  '/directory/': typeof AuthenticatedDirectoryIndexRoute
+  '/homestay-record/': typeof AuthenticatedHomestayRecordIndexRoute
+  '/homestay/': typeof AuthenticatedHomestayIndexRoute
+  '/roles/': typeof AuthenticatedRolesIndexRoute
   '/settings/': typeof AuthenticatedSettingsIndexRoute
-  '/users': typeof AuthenticatedUsersIndexRoute
+  '/users/': typeof AuthenticatedUsersIndexRoute
 }
 export interface FileRoutesByTo {
   '/payment': typeof PaymentRoute
@@ -360,6 +360,7 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/'
     | '/payment'
     | '/settings'
     | '/forgot-password'
@@ -374,7 +375,6 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/homestay/$homestayId'
-    | '/'
     | '/billing/review'
     | '/errors/$error'
     | '/homestay-list/$homestayId'
@@ -385,16 +385,16 @@ export interface FileRouteTypes {
     | '/settings/check-in'
     | '/settings/display'
     | '/settings/notifications'
-    | '/billing'
-    | '/check-in-logs'
-    | '/check-in'
-    | '/checkpoints'
-    | '/directory'
-    | '/homestay-record'
-    | '/homestay'
-    | '/roles'
+    | '/billing/'
+    | '/check-in-logs/'
+    | '/check-in/'
+    | '/checkpoints/'
+    | '/directory/'
+    | '/homestay-record/'
+    | '/homestay/'
+    | '/roles/'
     | '/settings/'
-    | '/users'
+    | '/users/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/payment'
@@ -500,7 +500,7 @@ declare module '@tanstack/react-router' {
     '/_authenticated': {
       id: '/_authenticated'
       path: ''
-      fullPath: ''
+      fullPath: '/'
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -605,7 +605,7 @@ declare module '@tanstack/react-router' {
     '/_authenticated/users/': {
       id: '/_authenticated/users/'
       path: '/users'
-      fullPath: '/users'
+      fullPath: '/users/'
       preLoaderRoute: typeof AuthenticatedUsersIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
@@ -619,56 +619,56 @@ declare module '@tanstack/react-router' {
     '/_authenticated/roles/': {
       id: '/_authenticated/roles/'
       path: '/roles'
-      fullPath: '/roles'
+      fullPath: '/roles/'
       preLoaderRoute: typeof AuthenticatedRolesIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/homestay/': {
       id: '/_authenticated/homestay/'
       path: '/homestay'
-      fullPath: '/homestay'
+      fullPath: '/homestay/'
       preLoaderRoute: typeof AuthenticatedHomestayIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/homestay-record/': {
       id: '/_authenticated/homestay-record/'
       path: '/homestay-record'
-      fullPath: '/homestay-record'
+      fullPath: '/homestay-record/'
       preLoaderRoute: typeof AuthenticatedHomestayRecordIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/directory/': {
       id: '/_authenticated/directory/'
       path: '/directory'
-      fullPath: '/directory'
+      fullPath: '/directory/'
       preLoaderRoute: typeof AuthenticatedDirectoryIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/checkpoints/': {
       id: '/_authenticated/checkpoints/'
       path: '/checkpoints'
-      fullPath: '/checkpoints'
+      fullPath: '/checkpoints/'
       preLoaderRoute: typeof AuthenticatedCheckpointsIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/check-in/': {
       id: '/_authenticated/check-in/'
       path: '/check-in'
-      fullPath: '/check-in'
+      fullPath: '/check-in/'
       preLoaderRoute: typeof AuthenticatedCheckInIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/check-in-logs/': {
       id: '/_authenticated/check-in-logs/'
       path: '/check-in-logs'
-      fullPath: '/check-in-logs'
+      fullPath: '/check-in-logs/'
       preLoaderRoute: typeof AuthenticatedCheckInLogsIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/billing/': {
       id: '/_authenticated/billing/'
       path: '/billing'
-      fullPath: '/billing'
+      fullPath: '/billing/'
       preLoaderRoute: typeof AuthenticatedBillingIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
