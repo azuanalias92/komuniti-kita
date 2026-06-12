@@ -4,7 +4,7 @@ import { SignIn } from '@/features/auth/sign-in'
 
 const searchSchema = z.object({
   error: z.string().optional(),
-  new_user: z.string().optional(),
+  new_user: z.boolean().optional(),
   email: z.string().optional(),
   name: z.string().optional(),
 })
