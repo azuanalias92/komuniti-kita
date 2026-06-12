@@ -28,7 +28,7 @@ export function Billing() {
   const [year, setYear] = useState<string>(String(new Date().getFullYear()))
   const [month, setMonth] = useState<string>(String(new Date().getMonth() + 1))
 
-  const { data } = useQuery<{ frequency: string; rate: number; period: { start: string; end: string }; data: SummaryRow[] }>({
+  const { data } = useQuery<{ frequency: string; rate: number; period: { start: string; end: string } | null; data: SummaryRow[] }>({
     queryKey: ['billing:summary', frequency, year, month],
     queryFn: async () => {
       const params = new URLSearchParams({ frequency, year })
@@ -40,6 +40,9 @@ export function Billing() {
   })
 
   const rows = data?.data || []
+  const periodLabel = data?.period
+    ? `${data.period.start} → ${data.period.end}`
+    : 'No billing settings yet'
 
   const { data: residents } = useQuery<{ id: string; houseNo: string }[]>({
     queryKey: ['residents:list-basic'],
@@ -61,7 +64,9 @@ export function Billing() {
     queryKey: ['billing:payments', data?.period?.start, data?.period?.end],
     enabled: !!data?.period?.start && !!data?.period?.end,
     queryFn: async () => {
-      const params = new URLSearchParams({ start: data!.period.start, end: data!.period.end, status: 'confirmed' })
+      if (!data?.period) return []
+      const { start, end } = data.period
+      const params = new URLSearchParams({ start, end, status: 'confirmed' })
       const res = await fetch(`/api/billing/payments?${params.toString()}`)
       if (!res.ok) throw new Error('Failed to load payments')
       return await res.json()
@@ -121,7 +126,7 @@ export function Billing() {
                 </div>
               )}
               <div className="flex items-end text-sm text-muted-foreground">
-                <div>Rate: RM {data?.rate} • Period: {data?.period.start} → {data?.period.end}</div>
+                <div>Rate: RM {data?.rate ?? 0} • Period: {periodLabel}</div>
               </div>
             </div>
           </CardContent>
@@ -206,4 +211,3 @@ export function Billing() {
     </>
   )
 }
-

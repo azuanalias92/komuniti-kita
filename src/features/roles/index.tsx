@@ -27,7 +27,7 @@ const roleSchema = z.object({
 type Crud = { create: boolean; read: boolean; update: boolean; delete: boolean };
 
 function resourceList() {
-  return ["/", "/roles", "/users", "/checkpoints", "/check-in", "/check-in-logs", "/directory", "/homestay", "/settings"];
+  return ["/", "/roles", "/users", "/tenants", "/checkpoints", "/check-in", "/check-in-logs", "/directory", "/homestay", "/settings"];
 }
 
 export function Roles() {

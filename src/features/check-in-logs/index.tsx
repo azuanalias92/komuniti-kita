@@ -34,6 +34,10 @@ interface GroupedLogs {
   };
 }
 
+function isValidDate(date: Date) {
+  return !Number.isNaN(date.getTime());
+}
+
 export function CheckInLogs() {
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
@@ -51,15 +55,17 @@ export function CheckInLogs() {
       });
       if (!res.ok) return [];
       const json = res.status === 204 ? [] : await res.json();
-      return (json as any[]).map((item) => ({
-        id: item.id,
-        checkpointId: item.checkpointId || item.checkpoint_id,
-        checkpointName: item.checkpointName || item.checkpoint_name,
-        userId: item.userId || item.user_id,
-        userName: item.userName || item.user_name,
-        timestamp: item.timestamp || item.created_at,
-        date: new Date(item.timestamp || item.created_at),
-      }));
+      return (json as any[])
+        .map((item) => ({
+          id: item.id,
+          checkpointId: item.checkpointId || item.checkpoint_id,
+          checkpointName: item.checkpointName || item.checkpoint_name,
+          userId: item.userId || item.user_id,
+          userName: item.userName || item.user_name,
+          timestamp: item.timestamp || item.created_at,
+          date: new Date(item.timestamp || item.created_at),
+        }))
+        .filter((item) => item.id && isValidDate(item.date));
     },
   });
 
@@ -113,7 +119,7 @@ export function CheckInLogs() {
       filtered = filtered.filter(
         (log) =>
           (log.userName || userNameById.get(String(log.userId)) || "-").toLowerCase().includes(searchTerm.toLowerCase()) ||
-          log.checkpointName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (log.checkpointName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
           format(log.date, "dd/MM/yyyy p").toLowerCase().includes(searchTerm.toLowerCase())
       );
     }

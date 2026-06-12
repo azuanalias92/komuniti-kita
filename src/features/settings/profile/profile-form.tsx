@@ -27,7 +27,23 @@ const profileFormSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>
 
-const defaultValues: Partial<ProfileFormValues> = {}
+const defaultValues: ProfileFormValues = {
+  email: '',
+  username: '',
+  firstName: '',
+  lastName: '',
+  phoneNumber: '',
+}
+
+function getFallbackValues(email: string): ProfileFormValues {
+  return {
+    email,
+    username: email.split('@')[0] || '',
+    firstName: '',
+    lastName: '',
+    phoneNumber: '',
+  }
+}
 
 export function ProfileForm() {
   const { auth } = useAuthStore()
@@ -40,27 +56,28 @@ export function ProfileForm() {
   useEffect(() => {
     const load = async () => {
       const email = auth.user?.email
-      if (!email) return
-      const res = await fetch(`/api/profile?email=${encodeURIComponent(email)}`)
-      if (res.status === 204) {
-        form.reset({
-          email,
-          username: email.split('@')[0],
-          firstName: '',
-          lastName: '',
-          phoneNumber: '',
-        })
+      if (!email) {
+        form.reset(defaultValues)
         return
       }
-      if (res.ok) {
-        const row = await res.json()
+
+      try {
+        const res = await fetch(`/api/profile?email=${encodeURIComponent(email)}`)
+        if (res.status === 204 || !res.ok) {
+          form.reset(getFallbackValues(email))
+          return
+        }
+
+        const row = await res.json().catch(() => null)
         form.reset({
-          email: row.email || email,
-          username: row.username || email.split('@')[0],
-          firstName: row.first_name || '',
-          lastName: row.last_name || '',
-          phoneNumber: row.phone_number || '',
+          email: row?.email || email,
+          username: row?.username || email.split('@')[0] || '',
+          firstName: row?.first_name || '',
+          lastName: row?.last_name || '',
+          phoneNumber: row?.phone_number || '',
         })
+      } catch {
+        form.reset(getFallbackValues(email))
       }
     }
     load()
