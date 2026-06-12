@@ -39,7 +39,7 @@ export async function apiFetch(
  */
 export function syncTenantAfterAuth() {
   const { auth } = useAuthStore.getState()
-  const { setTenants, setCurrentTenant, addTenant } = useTenantStore.getState()
+  const { setTenants, setCurrentTenant } = useTenantStore.getState()
 
   if (auth.user?.role.includes('super_admin') && auth.user?.tenants?.length) {
     // Super admin — populate all tenants for the switcher
