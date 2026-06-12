@@ -1,13 +1,15 @@
+import { hasPermission, getTenantId } from '../_lib/auth'
+
 export async function onRequestPut({ env, request, params }: { env: { DB: D1Database }; request: Request; params: { id: string } }) {
   try {
-    const authHeader = request.headers.get("Authorization");
-    if (!authHeader || !(await hasPermission(env, authHeader, "/check-in-logs", "update"))) {
+    if (!(await hasPermission(env, request, "/check-in-logs", "update"))) {
       return new Response(JSON.stringify({ error: "forbidden" }), {
         status: 403,
         headers: { "content-type": "application/json" },
       });
     }
 
+    const tenantId = getTenantId(request);
     const id = params.id;
     const body = await request.json();
 
@@ -33,10 +35,10 @@ export async function onRequestPut({ env, request, params }: { env: { DB: D1Data
     const updateSql = `
       UPDATE homestay_checkins
       SET person_in_charge = ?, guests = ?, plates_json = ?, arrival = ?, departure = ?, notes = ?
-      WHERE id = ?
+      WHERE id = ? AND tenant_id = ?
     `;
 
-    await env.DB.prepare(updateSql).bind(personInCharge, numberOfGuests, JSON.stringify(plates), arrival, departure, notes, id).run();
+    await env.DB.prepare(updateSql).bind(personInCharge, numberOfGuests, JSON.stringify(plates), arrival, departure, notes, id, tenantId).run();
 
     const updated = {
       id,
@@ -54,31 +56,5 @@ export async function onRequestPut({ env, request, params }: { env: { DB: D1Data
       status: 500,
       headers: { "content-type": "application/json" },
     });
-  }
-}
-
-async function hasPermission(env: { DB: D1Database }, authHeader: string, resource: string, action: string): Promise<boolean> {
-  try {
-    const token = authHeader.replace("Bearer ", "");
-    if (token === "mock-access-token") return true;
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    const userRole = Array.isArray(payload.role) ? payload.role[0] : payload.role;
-
-    if (!userRole) return false;
-
-    const role = await env.DB.prepare(`SELECT id FROM roles WHERE lower(name) = lower(?)`).bind(userRole).first();
-    if (!role) return false;
-
-    const permission = await env.DB.prepare(
-      `SELECT ${action === "create" ? "can_create" : action === "read" ? "can_read" : action === "update" ? "can_update" : "can_delete"} as allowed
-       FROM role_permissions 
-       WHERE role_id = ? AND resource = ?`
-    )
-      .bind((role as any).id, resource)
-      .first();
-
-    return permission ? (permission as any).allowed === 1 : false;
-  } catch {
-    return false;
   }
 }

@@ -1,7 +1,10 @@
+import { getTenantId } from '../../_lib/auth'
+
 async function ensureSchema(env: { DB: D1Database }) {
   await env.DB.prepare(
     `CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL DEFAULT 'default',
       username TEXT,
       email TEXT UNIQUE,
       first_name TEXT,
@@ -18,6 +21,7 @@ async function ensureSchema(env: { DB: D1Database }) {
   await env.DB.prepare(
     `CREATE TABLE IF NOT EXISTS roles (
       id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL DEFAULT 'default',
       name TEXT UNIQUE,
       description TEXT,
       created_at TEXT,
@@ -28,6 +32,7 @@ async function ensureSchema(env: { DB: D1Database }) {
 
 export async function onRequestPatch({ request, params, env }: { request: Request; params: { id: string }; env: { DB: D1Database } }) {
   await ensureSchema(env)
+  const tenantId = getTenantId(request);
   const json = await request.json().catch(() => ({} as any))
   const role = typeof json.role === 'string' ? json.role.trim() : ''
   if (!role) {
@@ -36,15 +41,15 @@ export async function onRequestPatch({ request, params, env }: { request: Reques
       headers: { 'content-type': 'application/json' },
     })
   }
-  const existingRole = await env.DB.prepare(`SELECT id FROM roles WHERE name = ?`).bind(role).first()
+  const existingRole = await env.DB.prepare(`SELECT id FROM roles WHERE tenant_id = ? AND name = ?`).bind(tenantId, role).first()
   if (!existingRole) {
     return new Response(JSON.stringify({ error: 'role_not_found' }), {
       status: 404,
       headers: { 'content-type': 'application/json' },
     })
   }
-  const up = await env.DB.prepare(`UPDATE users SET role = ?, updated_at = ? WHERE id = ?`)
-    .bind(role, new Date().toISOString(), params.id)
+  const up = await env.DB.prepare(`UPDATE users SET role = ?, updated_at = ? WHERE id = ? AND tenant_id = ?`)
+    .bind(role, new Date().toISOString(), params.id, tenantId)
     .run()
   if (!up.success) {
     return new Response(JSON.stringify({ error: 'update_failed' }), {

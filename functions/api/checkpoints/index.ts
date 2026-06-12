@@ -1,17 +1,19 @@
+import { hasPermission, getTenantId } from '../_lib/auth'
+
 export async function onRequestGet({ env, request }: { env: { DB: D1Database }; request: Request }) {
   try {
     if (!env || !(env as any).DB || typeof (env as any).DB.prepare !== 'function') {
       return new Response(null, { status: 204 })
     }
     // Check permission
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader || !await hasPermission(env, authHeader, '/checkpoints', 'read')) {
+    if (!(await hasPermission(env, request, '/checkpoints', 'read'))) {
       return new Response(JSON.stringify({ error: 'forbidden' }), {
         status: 403,
         headers: { 'content-type': 'application/json' },
       })
     }
-    
+
+    const tenantId = getTenantId(request);
     const url = new URL(request.url)
     const page = Math.max(1, Number(url.searchParams.get('page') || '1'))
     const pageSize = Math.max(1, Math.min(100, Number(url.searchParams.get('pageSize') || '10')))
@@ -19,15 +21,15 @@ export async function onRequestGet({ env, request }: { env: { DB: D1Database }; 
 
     const offset = (page - 1) * pageSize
 
-    const where: string[] = []
-    const params: unknown[] = []
+    const where: string[] = ['tenant_id = ?']
+    const params: unknown[] = [tenantId]
 
     if (name) {
       where.push('(name LIKE ?)')
       params.push(`%${name}%`)
     }
 
-    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : ''
+    const whereSql = `WHERE ${where.join(' AND ')}`
 
     const tableCheck = await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='checkpoints'").first()
     if (!tableCheck) {
@@ -98,17 +100,19 @@ export async function onRequestPost({ env, request }: { env: { DB: D1Database };
       return new Response(JSON.stringify(created), { headers: { 'content-type': 'application/json' } })
     }
 
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader || !await hasPermission(env, authHeader, '/checkpoints', 'create')) {
+    if (!(await hasPermission(env, request, '/checkpoints', 'create'))) {
       return new Response(JSON.stringify({ error: 'forbidden' }), {
         status: 403,
         headers: { 'content-type': 'application/json' },
       })
     }
 
+    const tenantId = getTenantId(request);
+
     await env.DB.prepare(
       `CREATE TABLE IF NOT EXISTS checkpoints (
         id TEXT PRIMARY KEY,
+        tenant_id TEXT NOT NULL DEFAULT 'default',
         name TEXT,
         latitude REAL,
         longitude REAL,
@@ -131,9 +135,9 @@ export async function onRequestPost({ env, request }: { env: { DB: D1Database };
     const id = crypto.randomUUID()
     const now = new Date().toISOString()
     const insert = await env.DB.prepare(
-      `INSERT INTO checkpoints (id, name, latitude, longitude, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?)`
-    ).bind(id, name, latitude, longitude, now, now).run()
+      `INSERT INTO checkpoints (id, tenant_id, name, latitude, longitude, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
+    ).bind(id, tenantId, name, latitude, longitude, now, now).run()
 
     if (!(insert as any).success && typeof (insert as any).success !== 'undefined') {
       return new Response(JSON.stringify({ error: 'insert_failed' }), {
@@ -169,13 +173,14 @@ export async function onRequestPut({ env, request }: { env: { DB: D1Database }; 
       })
     }
 
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader || !await hasPermission(env, authHeader, '/checkpoints', 'update')) {
+    if (!(await hasPermission(env, request, '/checkpoints', 'update'))) {
       return new Response(JSON.stringify({ error: 'forbidden' }), {
         status: 403,
         headers: { 'content-type': 'application/json' },
       })
     }
+
+    const tenantId = getTenantId(request);
 
     const body = await request.json().catch(() => ({} as any))
     const id = body.id
@@ -194,8 +199,8 @@ export async function onRequestPut({ env, request }: { env: { DB: D1Database }; 
     const update = await env.DB.prepare(
       `UPDATE checkpoints 
        SET name = ?, latitude = ?, longitude = ?, updated_at = ?
-       WHERE id = ?`
-    ).bind(name, latitude, longitude, now, id).run()
+       WHERE id = ? AND tenant_id = ?`
+    ).bind(name, latitude, longitude, now, id, tenantId).run()
 
     if (!(update as any).success) {
       return new Response(JSON.stringify({ error: 'update_failed' }), {
@@ -217,14 +222,14 @@ export async function onRequestPut({ env, request }: { env: { DB: D1Database }; 
 
 export async function onRequestDelete({ env, request }: { env: { DB: D1Database }; request: Request }) {
   try {
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader || !await hasPermission(env, authHeader, '/checkpoints', 'delete')) {
+    if (!(await hasPermission(env, request, '/checkpoints', 'delete'))) {
       return new Response(JSON.stringify({ error: 'forbidden' }), {
         status: 403,
         headers: { 'content-type': 'application/json' },
       })
     }
 
+    const tenantId = getTenantId(request);
     const url = new URL(request.url)
     const id = url.searchParams.get('id')
 
@@ -235,7 +240,7 @@ export async function onRequestDelete({ env, request }: { env: { DB: D1Database 
       })
     }
 
-    const result = await env.DB.prepare('DELETE FROM checkpoints WHERE id = ?').bind(id).run()
+    const result = await env.DB.prepare('DELETE FROM checkpoints WHERE id = ? AND tenant_id = ?').bind(id, tenantId).run()
 
     if (!(result as any).success) {
       return new Response(JSON.stringify({ error: 'delete_failed' }), {
@@ -250,44 +255,5 @@ export async function onRequestDelete({ env, request }: { env: { DB: D1Database 
       status: 500,
       headers: { 'content-type': 'application/json' },
     })
-  }
-}
-
-async function hasPermission(env: { DB: D1Database }, authHeader: string, resource: string, action: string): Promise<boolean> {
-  try {
-    // Extract role from auth header (simplified - in real app, verify JWT token)
-    const token = authHeader.replace('Bearer ', '')
-    if (token === 'mock-access-token') return true
-    const payload = JSON.parse(atob(token.split('.')[1]))
-    const userRole = Array.isArray(payload.role) ? payload.role[0] : payload.role
-    
-    if (!userRole) return false
-    
-    // Get role permissions
-    const role = await env.DB.prepare(`SELECT id FROM roles WHERE name = ?`).bind(userRole).first()
-    if (!role) return false
-    
-    const permission = await env.DB.prepare(
-      `SELECT ${action === 'create' ? 'can_create' : action === 'read' ? 'can_read' : action === 'update' ? 'can_update' : 'can_delete'} as allowed
-       FROM role_permissions 
-       WHERE role_id = ? AND resource = ?`
-    ).bind((role as any).id, resource).first()
-    
-    return permission ? (permission as any).allowed === 1 : false
-  } catch {
-    return false
-  }
-}
-
-interface D1Database {
-  prepare: (query: string) => {
-    first: <T = unknown>(...args: unknown[]) => Promise<T | null>
-    all: <T = unknown>(...args: unknown[]) => Promise<{ results?: T[] }>
-    run: <T = unknown>(...args: unknown[]) => Promise<{ success: boolean; meta: any }>
-    bind: (...args: unknown[]) => { 
-      first: <T = unknown>() => Promise<T | null>
-      all: <T = unknown>() => Promise<{ results?: T[] }>
-      run: <T = unknown>() => Promise<{ success: boolean; meta: any }> 
-    }
   }
 }

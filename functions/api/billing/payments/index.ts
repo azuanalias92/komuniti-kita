@@ -1,14 +1,17 @@
+import { hasPermission, getTenantId } from '../../_lib/auth'
+
 export async function onRequestGet({ env, request }: { env: { DB: D1Database }; request: Request }) {
   try {
     await ensurePaymentsTable(env.DB)
+    const tenantId = getTenantId(request);
     const url = new URL(request.url)
     const houseId = url.searchParams.get('houseId')
     const status = url.searchParams.get('status')
     const start = url.searchParams.get('start')
     const end = url.searchParams.get('end')
 
-    const where: string[] = []
-    const params: any[] = []
+    const where: string[] = ['tenant_id = ?']
+    const params: any[] = [tenantId]
     if (houseId) { where.push('house_id = ?'); params.push(houseId) }
     if (status) { where.push('status = ?'); params.push(status) }
     if (start && end) { where.push('payment_date BETWEEN ? AND ?'); params.push(start, end) }
@@ -24,6 +27,7 @@ export async function onRequestGet({ env, request }: { env: { DB: D1Database }; 
 export async function onRequestPost({ env, request }: { env: { DB: D1Database }; request: Request }) {
   try {
     await ensurePaymentsTable(env.DB)
+    const tenantId = getTenantId(request);
     const body = await request.json().catch(() => ({} as any))
     const houseId = String(body.houseId || '')
     const amount = Number(body.amount)
@@ -36,8 +40,8 @@ export async function onRequestPost({ env, request }: { env: { DB: D1Database };
 
     const id = crypto.randomUUID()
     const now = new Date().toISOString()
-    await env.DB.prepare('INSERT INTO payments (id, house_id, amount, receipt_key, payment_date, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-      .bind(id, houseId, amount, receiptKey, paymentDate, 'pending', now, now)
+    await env.DB.prepare('INSERT INTO payments (id, tenant_id, house_id, amount, receipt_key, payment_date, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .bind(id, tenantId, houseId, amount, receiptKey, paymentDate, 'pending', now, now)
       .run()
 
     return new Response(JSON.stringify({ id, houseId, amount, receiptKey, paymentDate, status: 'pending', createdAt: now }), { headers: { 'content-type': 'application/json' } })
@@ -48,18 +52,18 @@ export async function onRequestPost({ env, request }: { env: { DB: D1Database };
 
 export async function onRequestPut({ env, request }: { env: { DB: D1Database }; request: Request }) {
   try {
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader || !await hasPermission(env, authHeader, '/billing', 'update')) {
+    if (!(await hasPermission(env, request, '/billing', 'update'))) {
       return new Response(JSON.stringify({ error: 'forbidden' }), { status: 403, headers: { 'content-type': 'application/json' } })
     }
     await ensurePaymentsTable(env.DB)
+    const tenantId = getTenantId(request);
     const body = await request.json().catch(() => ({} as any))
     const id = String(body.id || '')
     const status = String(body.status || '')
     if (!id || !['pending','confirmed','rejected'].includes(status)) {
       return new Response(JSON.stringify({ error: 'invalid payload' }), { status: 400, headers: { 'content-type': 'application/json' } })
     }
-    await env.DB.prepare('UPDATE payments SET status = ?, updated_at = ?, reviewed_at = ? WHERE id = ?').bind(status, new Date().toISOString(), new Date().toISOString(), id).run()
+    await env.DB.prepare('UPDATE payments SET status = ?, updated_at = ?, reviewed_at = ? WHERE id = ? AND tenant_id = ?').bind(status, new Date().toISOString(), new Date().toISOString(), id, tenantId).run()
     return new Response(JSON.stringify({ id, status }), { headers: { 'content-type': 'application/json' } })
   } catch (e) {
     return new Response(JSON.stringify({ error: 'Failed to update payment' }), { status: 500, headers: { 'content-type': 'application/json' } })
@@ -70,6 +74,7 @@ async function ensurePaymentsTable(db: D1Database) {
   await db.prepare(`
     CREATE TABLE IF NOT EXISTS payments (
       id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL DEFAULT 'default',
       house_id TEXT NOT NULL,
       amount REAL NOT NULL,
       receipt_key TEXT NOT NULL,
@@ -81,38 +86,4 @@ async function ensurePaymentsTable(db: D1Database) {
     )
   `).run()
   try { await db.prepare('ALTER TABLE payments ADD COLUMN reviewed_at TEXT').run() } catch {}
-}
-
-async function hasPermission(env: { DB: D1Database }, authHeader: string, resource: string, action: string): Promise<boolean> {
-  try {
-    const token = authHeader.replace('Bearer ', '')
-    if (token === 'mock-access-token') return true
-    const payload = JSON.parse(atob(token.split('.')[1]))
-    const userRole = Array.isArray(payload.role) ? payload.role[0] : payload.role
-    if (!userRole) return false
-    if (userRole === 'superadmin') return true
-    const role = await env.DB.prepare(`SELECT id FROM roles WHERE lower(name) = lower(?)`).bind(userRole).first()
-    if (!role) return false
-    const permission = await env.DB.prepare(
-      `SELECT ${action === 'create' ? 'can_create' : action === 'read' ? 'can_read' : action === 'update' ? 'can_update' : 'can_delete'} as allowed
-       FROM role_permissions 
-       WHERE role_id = ? AND resource = ?`
-    ).bind((role as any).id, resource).first()
-    return permission ? (permission as any).allowed === 1 : false
-  } catch {
-    return false
-  }
-}
-
-interface D1Database {
-  prepare: (query: string) => {
-    run: (...args: any[]) => Promise<any>
-    first: <T = any>() => Promise<T | null>
-    all: () => Promise<{ results: any[] }>
-    bind: (...params: any[]) => {
-      run: (...args: any[]) => Promise<any>
-      first: <T = any>() => Promise<T | null>
-      all: () => Promise<{ results: any[] }>
-    }
-  }
 }

@@ -1,6 +1,9 @@
+import { getTenantId } from '../_lib/auth'
+
 export async function onRequestPut({ env, request, params }: { env: { DB: D1Database }; request: Request; params: { id: string } }) {
   try {
     const { id } = params
+    const tenantId = getTenantId(request);
     const body = await request.json()
     
     // Validate required fields
@@ -11,10 +14,10 @@ export async function onRequestPut({ env, request, params }: { env: { DB: D1Data
       })
     }
 
-    // Check if resident exists
+    // Check if resident exists and belongs to this tenant
     const existingResident = await env.DB.prepare(
-      'SELECT id FROM residents WHERE id = ?'
-    ).bind(id).first()
+      'SELECT id FROM residents WHERE id = ? AND tenant_id = ?'
+    ).bind(id, tenantId).first()
 
     if (!existingResident) {
       return new Response(JSON.stringify({ error: 'Resident not found' }), {
@@ -40,10 +43,10 @@ export async function onRequestPut({ env, request, params }: { env: { DB: D1Data
       plate: String(vehicle.plate || '').trim()
     })).filter(v => v.brand && v.model && v.plate) : []
 
-    // Check if house number already exists for a different resident
+    // Check if house number already exists for a different resident in this tenant
     const existingHouse = await env.DB.prepare(
-      'SELECT id FROM residents WHERE house_no = ? AND id != ?'
-    ).bind(houseNo, id).first()
+      'SELECT id FROM residents WHERE tenant_id = ? AND house_no = ? AND id != ?'
+    ).bind(tenantId, houseNo, id).first()
 
     if (existingHouse) {
       return new Response(JSON.stringify({ error: 'House number already exists' }), {
@@ -55,7 +58,7 @@ export async function onRequestPut({ env, request, params }: { env: { DB: D1Data
     const updateSql = `
       UPDATE residents 
       SET house_no = ?, house_type = ?, owners_json = ?, vehicles_json = ?
-      WHERE id = ?
+      WHERE id = ? AND tenant_id = ?
     `
 
     await env.DB.prepare(updateSql).bind(
@@ -63,7 +66,8 @@ export async function onRequestPut({ env, request, params }: { env: { DB: D1Data
       houseType,
       JSON.stringify(owners),
       JSON.stringify(vehicles),
-      id
+      id,
+      tenantId
     ).run()
 
     const updatedResident = {
@@ -86,11 +90,12 @@ export async function onRequestPut({ env, request, params }: { env: { DB: D1Data
 export async function onRequestDelete({ env, request, params }: { env: { DB: D1Database }; request: Request; params: { id: string } }) {
   try {
     const { id } = params
+    const tenantId = getTenantId(request);
 
-    // Check if resident exists
+    // Check if resident exists and belongs to this tenant
     const existingResident = await env.DB.prepare(
-      'SELECT id FROM residents WHERE id = ?'
-    ).bind(id).first()
+      'SELECT id FROM residents WHERE id = ? AND tenant_id = ?'
+    ).bind(id, tenantId).first()
 
     if (!existingResident) {
       return new Response(JSON.stringify({ error: 'Resident not found' }), {
@@ -99,7 +104,7 @@ export async function onRequestDelete({ env, request, params }: { env: { DB: D1D
       })
     }
 
-    await env.DB.prepare('DELETE FROM residents WHERE id = ?').bind(id).run()
+    await env.DB.prepare('DELETE FROM residents WHERE id = ? AND tenant_id = ?').bind(id, tenantId).run()
 
     return new Response(null, { status: 204 })
   } catch (err) {

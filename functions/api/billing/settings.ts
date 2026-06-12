@@ -1,11 +1,14 @@
+import { hasPermission, getTenantId, getUserFromToken } from '../../_lib/auth'
+
 interface Env {
   DB: D1Database
 }
 
-export async function onRequestGet({ env }: { env: Env }) {
+export async function onRequestGet({ env, request }: { env: Env; request: Request }) {
   try {
     await ensureSettingsTable(env.DB)
-    const row = await env.DB.prepare('SELECT id, rate, frequency, qr_key, bg_key, start_date, updated_at FROM billing_settings ORDER BY updated_at DESC LIMIT 1').first()
+    const tenantId = getTenantId(request);
+    const row = await env.DB.prepare('SELECT id, rate, frequency, qr_key, bg_key, start_date, updated_at FROM billing_settings WHERE tenant_id = ? ORDER BY updated_at DESC LIMIT 1').bind(tenantId).first()
     if (!row) return new Response(null, { status: 204 })
     return new Response(JSON.stringify({
       id: row.id,
@@ -23,13 +26,13 @@ export async function onRequestGet({ env }: { env: Env }) {
 
 export async function onRequestPost({ env, request }: { env: Env; request: Request }) {
   try {
-    const authHeader = request.headers.get('Authorization')
-    const canUpdate = authHeader && await hasPermission(env, authHeader, '/settings', 'update')
-    const canRead = authHeader && await hasPermission(env, authHeader, '/settings', 'read')
-    if (!authHeader || (!canUpdate && !canRead)) {
+    const canUpdate = await hasPermission(env, request, '/settings', 'update')
+    const canRead = await hasPermission(env, request, '/settings', 'read')
+    if (!canUpdate && !canRead) {
       return new Response(JSON.stringify({ error: 'forbidden' }), { status: 403, headers: { 'content-type': 'application/json' } })
     }
 
+    const tenantId = getTenantId(request);
     const body = await request.json().catch(() => ({} as any))
     const rate = Number(body.rate)
     const frequency = String(body.frequency || 'monthly')
@@ -50,18 +53,19 @@ export async function onRequestPost({ env, request }: { env: Env; request: Reque
     await ensureSettingsTable(env.DB)
     await ensureHistoryTable(env.DB)
 
-    const prev = await env.DB.prepare('SELECT rate, frequency, qr_key, bg_key, start_date FROM billing_settings ORDER BY updated_at DESC LIMIT 1').first()
+    const prev = await env.DB.prepare('SELECT rate, frequency, qr_key, bg_key, start_date FROM billing_settings WHERE tenant_id = ? ORDER BY updated_at DESC LIMIT 1').bind(tenantId).first()
     const id = crypto.randomUUID()
     const now = new Date().toISOString()
-    await env.DB.prepare('INSERT INTO billing_settings (id, rate, frequency, qr_key, bg_key, start_date, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
-      .bind(id, rate, frequency, qrKey, bgKey, startDate, now)
+    await env.DB.prepare('INSERT INTO billing_settings (id, tenant_id, rate, frequency, qr_key, bg_key, start_date, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+      .bind(id, tenantId, rate, frequency, qrKey, bgKey, startDate, now)
       .run()
 
-    const changedBy = getTokenUser(request)
+    const changedBy = getUserFromToken(request)
     await env.DB.prepare(
-      'INSERT INTO billing_settings_history (id, prev_rate, prev_frequency, prev_qr_key, prev_bg_key, prev_start_date, new_rate, new_frequency, new_qr_key, new_bg_key, new_start_date, changed_at, changed_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      'INSERT INTO billing_settings_history (id, tenant_id, prev_rate, prev_frequency, prev_qr_key, prev_bg_key, prev_start_date, new_rate, new_frequency, new_qr_key, new_bg_key, new_start_date, changed_at, changed_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
     ).bind(
       crypto.randomUUID(),
+      tenantId,
       prev ? Number(prev.rate) : null,
       prev ? String(prev.frequency || '') : null,
       prev ? (prev.qr_key ? String(prev.qr_key) : null) : null,
@@ -73,7 +77,7 @@ export async function onRequestPost({ env, request }: { env: Env; request: Reque
       bgKey,
       startDate,
       now,
-      changedBy
+      changedBy ? changedBy.email || changedBy.id : null
     ).run()
 
     return new Response(JSON.stringify({ id, rate, frequency, qrKey, bgKey, startDate, updatedAt: now }), { headers: { 'content-type': 'application/json' } })
@@ -87,6 +91,7 @@ async function ensureSettingsTable(db: D1Database) {
   await db.prepare(`
     CREATE TABLE IF NOT EXISTS billing_settings (
       id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL DEFAULT 'default',
       rate REAL NOT NULL,
       frequency TEXT NOT NULL,
       qr_key TEXT,
@@ -103,6 +108,7 @@ async function ensureHistoryTable(db: D1Database) {
   await db.prepare(`
     CREATE TABLE IF NOT EXISTS billing_settings_history (
       id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL DEFAULT 'default',
       prev_rate REAL,
       prev_frequency TEXT,
       prev_qr_key TEXT,
@@ -127,50 +133,4 @@ function isValidDate(d: string): boolean {
   if (!m) return false
   const dt = new Date(d)
   return !isNaN(dt.getTime())
-}
-
-function getTokenUser(request: Request): string | null {
-  try {
-    const auth = request.headers.get('Authorization') || ''
-    const token = auth.replace('Bearer ', '')
-    const payload = token && token.includes('.') ? JSON.parse(atob(token.split('.')[1])) : null
-    const uid = payload?.sub || payload?.userId || payload?.email || null
-    return uid ? String(uid) : null
-  } catch {
-    return null
-  }
-}
-
-async function hasPermission(env: { DB: D1Database }, authHeader: string, resource: string, action: string): Promise<boolean> {
-  try {
-    const token = authHeader.replace('Bearer ', '')
-    if (token === 'mock-access-token') return true
-    const payload = JSON.parse(atob(token.split('.')[1]))
-    const userRole = Array.isArray(payload.role) ? payload.role[0] : payload.role
-    if (!userRole) return false
-    if (userRole === 'superadmin') return true
-    const role = await env.DB.prepare(`SELECT id FROM roles WHERE lower(name) = lower(?)`).bind(userRole).first()
-    if (!role) return false
-    const permission = await env.DB.prepare(
-      `SELECT ${action === 'create' ? 'can_create' : action === 'read' ? 'can_read' : action === 'update' ? 'can_update' : 'can_delete'} as allowed
-       FROM role_permissions 
-       WHERE role_id = ? AND resource = ?`
-    ).bind((role as any).id, resource).first()
-    return permission ? (permission as any).allowed === 1 : false
-  } catch {
-    return false
-  }
-}
-
-interface D1Database {
-  prepare: (query: string) => {
-    run: (...args: any[]) => Promise<any>
-    first: <T = any>() => Promise<T | null>
-    all: () => Promise<{ results: any[] }>
-    bind: (...params: any[]) => {
-      run: (...args: any[]) => Promise<any>
-      first: <T = any>() => Promise<T | null>
-      all: () => Promise<{ results: any[] }>
-    }
-  }
 }

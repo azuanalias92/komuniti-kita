@@ -7,6 +7,7 @@ import { Loader2, LogIn } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/auth-store'
 import { useAclStore } from '@/stores/acl-store'
+import { syncTenantAfterAuth } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -65,6 +66,7 @@ export function UserAuthForm({
       const json = await res.json()
       auth.setUser(json.user)
       auth.setAccessToken(json.accessToken)
+      syncTenantAfterAuth()
       const firstRole = Array.isArray(json.user?.role) && json.user.role.length > 0 ? json.user.role[0] : ''
       if (firstRole) {
         try {

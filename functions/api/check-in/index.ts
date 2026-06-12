@@ -1,3 +1,5 @@
+import { getTenantId } from '../_lib/auth'
+
 interface Env {
   DB: D1Database;
 }
@@ -21,6 +23,7 @@ export async function onRequestGet({ request, env }: { request: Request; env: En
     const authHeader = request.headers.get("Authorization");
     if (!authHeader) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
 
+    const tenantId = getTenantId(request);
     const url = new URL(request.url);
     const userId = url.searchParams.get("userId");
     const checkpointId = url.searchParams.get("checkpointId");
@@ -32,11 +35,11 @@ export async function onRequestGet({ request, env }: { request: Request; env: En
       const lastCheckIn = await env.DB.prepare(
         `
         SELECT timestamp FROM check_in_logs 
-        WHERE user_id = ? AND checkpoint_id = ?
+        WHERE tenant_id = ? AND user_id = ? AND checkpoint_id = ?
         ORDER BY timestamp DESC LIMIT 1
       `
       )
-        .bind(userId, checkpointId)
+        .bind(tenantId, userId, checkpointId)
         .first();
 
       return new Response(
@@ -61,9 +64,12 @@ export async function onRequestGet({ request, env }: { request: Request; env: En
           c.name as checkpoint_name
         FROM check_in_logs cl
         LEFT JOIN checkpoints c ON cl.checkpoint_id = c.id
+        WHERE cl.tenant_id = ?
         ORDER BY cl.timestamp DESC
       `
-      ).all();
+      )
+        .bind(tenantId)
+        .all();
 
       return new Response(JSON.stringify(logs.results || []), {
         headers: { "content-type": "application/json" },
@@ -86,6 +92,7 @@ export async function onRequestPost({ request, env }: { request: Request; env: E
     // Basic auth check - in real app use middleware
     if (!authHeader) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
 
+    const tenantId = getTenantId(request);
     const body = (await request.json()) as { latitude: number; longitude: number; userId: string };
     const { latitude, longitude, userId } = body;
 
@@ -100,8 +107,8 @@ export async function onRequestPost({ request, env }: { request: Request; env: E
     const radius = settings?.radius || 50; // meters
     const timeWindow = settings?.time_window || 5; // minutes
 
-    // 2. Get Checkpoints
-    const { results: checkpoints } = await env.DB.prepare("SELECT * FROM checkpoints").all();
+    // 2. Get Checkpoints (filter by tenant)
+    const { results: checkpoints } = await env.DB.prepare("SELECT * FROM checkpoints WHERE tenant_id = ?").bind(tenantId).all();
 
     if (!checkpoints || checkpoints.length === 0) {
       return new Response(JSON.stringify({ error: "No checkpoints defined" }), { status: 400 });
@@ -136,11 +143,11 @@ export async function onRequestPost({ request, env }: { request: Request; env: E
     const lastCheckIn = await env.DB.prepare(
       `
       SELECT timestamp FROM check_in_logs 
-      WHERE user_id = ? AND checkpoint_id = ? AND timestamp > ?
+      WHERE tenant_id = ? AND user_id = ? AND checkpoint_id = ? AND timestamp > ?
       ORDER BY timestamp DESC LIMIT 1
     `
     )
-      .bind(userId, nearestCheckpoint.id, cutoffTime)
+      .bind(tenantId, userId, nearestCheckpoint.id, cutoffTime)
       .first();
 
     if (lastCheckIn) {
@@ -162,11 +169,11 @@ export async function onRequestPost({ request, env }: { request: Request; env: E
 
     await env.DB.prepare(
       `
-      INSERT INTO check_in_logs (id, user_id, checkpoint_id, latitude, longitude, timestamp)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO check_in_logs (id, tenant_id, user_id, checkpoint_id, latitude, longitude, timestamp)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `
     )
-      .bind(id, userId, nearestCheckpoint.id, latitude, longitude, timestamp)
+      .bind(id, tenantId, userId, nearestCheckpoint.id, latitude, longitude, timestamp)
       .run();
 
     return new Response(
@@ -191,6 +198,7 @@ async function ensureTables(db: D1Database) {
       `
     CREATE TABLE IF NOT EXISTS check_in_logs (
       id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL DEFAULT 'default',
       user_id TEXT,
       checkpoint_id TEXT,
       latitude REAL,
@@ -207,6 +215,7 @@ async function ensureTables(db: D1Database) {
       `
     CREATE TABLE IF NOT EXISTS check_in_settings (
       id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL DEFAULT 'default',
       radius INTEGER,
       time_window INTEGER,
       updated_at TEXT
@@ -221,6 +230,7 @@ async function ensureTables(db: D1Database) {
       `
     CREATE TABLE IF NOT EXISTS checkpoints (
       id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL DEFAULT 'default',
       name TEXT,
       latitude REAL,
       longitude REAL,

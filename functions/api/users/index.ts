@@ -1,7 +1,10 @@
+import { hasPermission, getTenantId, sha256 } from '../_lib/auth'
+
 async function ensureSchema(env: { DB: D1Database }) {
   await env.DB.prepare(
     `CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL DEFAULT 'default',
       username TEXT,
       email TEXT UNIQUE,
       first_name TEXT,
@@ -27,14 +30,14 @@ export async function onRequestGet({ request, env }: { request: Request; env: { 
   await ensureSchema(env);
 
   // Check permission
-  const authHeader = request.headers.get("Authorization");
-  if (!authHeader || !(await hasPermission(env, authHeader, "/users", "read"))) {
+  if (!(await hasPermission(env, request, "/users", "read"))) {
     return new Response(JSON.stringify({ error: "forbidden" }), {
       status: 403,
       headers: { "content-type": "application/json" },
     });
   }
 
+  const tenantId = getTenantId(request);
   const url = new URL(request.url);
   const page = Math.max(1, Number(url.searchParams.get("page") || "1"));
   const pageSize = Math.max(1, Math.min(100, Number(url.searchParams.get("pageSize") || "10")));
@@ -44,6 +47,8 @@ export async function onRequestGet({ request, env }: { request: Request; env: { 
 
   const where: string[] = [];
   const bind: any[] = [];
+  where.push("tenant_id = ?");
+  bind.push(tenantId);
   if (username) {
     where.push("(username LIKE ? OR first_name LIKE ? OR last_name LIKE ? OR email LIKE ?)");
     bind.push(`%${username}%`, `%${username}%`, `%${username}%`, `%${username}%`);
@@ -56,7 +61,7 @@ export async function onRequestGet({ request, env }: { request: Request; env: { 
     where.push(`role IN (${roles.map(() => "?").join(",")})`);
     bind.push(...roles);
   }
-  const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+  const whereSql = `WHERE ${where.join(" AND ")}`;
 
   const offset = (page - 1) * pageSize;
   const totalRow = await env.DB.prepare(`SELECT COUNT(*) as cnt FROM users ${whereSql}`)
@@ -94,13 +99,6 @@ export async function onRequestGet({ request, env }: { request: Request; env: { 
   });
 }
 
-async function sha256(input: string): Promise<string> {
-  const data = new TextEncoder().encode(input)
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
-}
-
 export async function onRequestPost({ request, env }: { request: Request; env: { DB: D1Database } }) {
   try {
     if (!env || !(env as any).DB || typeof (env as any).DB.prepare !== 'function') {
@@ -111,14 +109,14 @@ export async function onRequestPost({ request, env }: { request: Request; env: {
     }
     await ensureSchema(env)
 
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader || !(await hasPermission(env, authHeader, '/users', 'create'))) {
+    if (!(await hasPermission(env, request, '/users', 'create'))) {
       return new Response(JSON.stringify({ error: 'forbidden' }), {
         status: 403,
         headers: { 'content-type': 'application/json' },
       })
     }
 
+    const tenantId = getTenantId(request);
     const body = await request.json().catch(() => ({} as any))
     const username = typeof body.username === 'string' ? body.username.trim() : ''
     const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
@@ -148,8 +146,8 @@ export async function onRequestPost({ request, env }: { request: Request; env: {
       })
     }
 
-    const exists = await env.DB.prepare('SELECT id FROM users WHERE lower(email) = lower(?) OR lower(username) = lower(?)')
-      .bind(email, username)
+    const exists = await env.DB.prepare('SELECT id FROM users WHERE tenant_id = ? AND (lower(email) = lower(?) OR lower(username) = lower(?))')
+      .bind(tenantId, email, username)
       .first()
     if (exists) {
       return new Response(JSON.stringify({ error: 'user_exists' }), {
@@ -163,10 +161,10 @@ export async function onRequestPost({ request, env }: { request: Request; env: {
     const passwordHash = await sha256(password)
 
     const ok = await env.DB.prepare(
-      `INSERT INTO users (id, username, email, first_name, last_name, phone_number, status, role, password_hash, password_updated_at, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO users (id, tenant_id, username, email, first_name, last_name, phone_number, status, role, password_hash, password_updated_at, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
-      .bind(id, username, email, firstName, lastName, phoneNumber, status, role, passwordHash, now, now, now)
+      .bind(id, tenantId, username, email, firstName, lastName, phoneNumber, status, role, passwordHash, now, now, now)
       .run()
 
     if (!ok.success) {
@@ -197,33 +195,5 @@ export async function onRequestPost({ request, env }: { request: Request; env: {
       status: 500,
       headers: { 'content-type': 'application/json' },
     })
-  }
-}
-
-async function hasPermission(env: { DB: D1Database }, authHeader: string, resource: string, action: string): Promise<boolean> {
-  try {
-    // Extract role from auth header (simplified - in real app, verify JWT token)
-    const token = authHeader.replace("Bearer ", "");
-    if (token === "mock-access-token") return true;
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    const userRole = Array.isArray(payload.role) ? payload.role[0] : payload.role;
-
-    if (!userRole) return false;
-
-    // Get role permissions
-    const role = await env.DB.prepare(`SELECT id FROM roles WHERE lower(name) = lower(?)`).bind(userRole).first();
-    if (!role) return false;
-
-    const permission = await env.DB.prepare(
-      `SELECT ${action === "create" ? "can_create" : action === "read" ? "can_read" : action === "update" ? "can_update" : "can_delete"} as allowed
-       FROM role_permissions 
-       WHERE role_id = ? AND resource = ?`
-    )
-      .bind((role as any).id, resource)
-      .first();
-
-    return permission ? (permission as any).allowed === 1 : false;
-  } catch {
-    return false;
   }
 }

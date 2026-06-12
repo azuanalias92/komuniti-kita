@@ -1,5 +1,8 @@
+import { getTenantId } from '../../_lib/auth'
+
 export async function onRequestGet({ env, request }: { env: { DB: D1Database }; request: Request }) {
   try {
+    const tenantId = getTenantId(request);
     const settings = await getSettings(env.DB)
     if (!settings) return new Response(JSON.stringify({ error: 'no_settings' }), { status: 400, headers: { 'content-type': 'application/json' } })
 
@@ -16,12 +19,12 @@ export async function onRequestGet({ env, request }: { env: { DB: D1Database }; 
     const computed = currentPeriod(freqParam, year, month)
     const period = clampStartToSettings(computed, settings.startDate)
 
-    const residents = await env.DB.prepare('SELECT id, house_no, house_type FROM residents ORDER BY house_no ASC').all()
+    const residents = await env.DB.prepare('SELECT id, house_no, house_type FROM residents WHERE tenant_id = ? ORDER BY house_no ASC').bind(tenantId).all()
     const list = [] as any[]
     for (const r of residents.results || []) {
       const houseId = String(r.id)
-      const sumRow = await env.DB.prepare('SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE house_id = ? AND payment_date BETWEEN ? AND ? AND status = ?')
-        .bind(houseId, period.start, period.end, 'confirmed')
+      const sumRow = await env.DB.prepare('SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE tenant_id = ? AND house_id = ? AND payment_date BETWEEN ? AND ? AND status = ?')
+        .bind(tenantId, houseId, period.start, period.end, 'confirmed')
         .first() as { total?: number } | null
       const amountPaid = Number(sumRow?.total || 0)
       const amountDue = Number(settings.rate)
@@ -49,6 +52,7 @@ async function getSettings(db: D1Database) {
   await db.prepare(`
     CREATE TABLE IF NOT EXISTS billing_settings (
       id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL DEFAULT 'default',
       rate REAL NOT NULL,
       frequency TEXT NOT NULL,
       qr_key TEXT,
@@ -96,6 +100,7 @@ async function ensureResidentsTable(db: D1Database) {
   await db.prepare(`
     CREATE TABLE IF NOT EXISTS residents (
       id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL DEFAULT 'default',
       house_no TEXT NOT NULL,
       house_type TEXT NOT NULL,
       owners_json TEXT NOT NULL,
@@ -108,6 +113,7 @@ async function ensurePaymentsTable(db: D1Database) {
   await db.prepare(`
     CREATE TABLE IF NOT EXISTS payments (
       id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL DEFAULT 'default',
       house_id TEXT NOT NULL,
       amount REAL NOT NULL,
       receipt_key TEXT NOT NULL,
@@ -117,17 +123,4 @@ async function ensurePaymentsTable(db: D1Database) {
       updated_at TEXT
     )
   `).run()
-}
-
-interface D1Database {
-  prepare: (query: string) => {
-    run: (...args: any[]) => Promise<any>
-    first: <T = any>() => Promise<T | null>
-    all: () => Promise<{ results: any[] }>
-    bind: (...params: any[]) => {
-      run: (...args: any[]) => Promise<any>
-      first: <T = any>() => Promise<T | null>
-      all: () => Promise<{ results: any[] }>
-    }
-  }
 }

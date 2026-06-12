@@ -1,5 +1,8 @@
+import { getTenantId } from '../_lib/auth'
+
 export async function onRequestGet({ env, request }: { env: { DB: D1Database }; request: Request }) {
   try {
+    const tenantId = getTenantId(request);
     const url = new URL(request.url);
     const page = Math.max(1, Number(url.searchParams.get("page") || "1"));
     const pageSize = Math.max(1, Math.min(100, Number(url.searchParams.get("pageSize") || "10")));
@@ -8,8 +11,8 @@ export async function onRequestGet({ env, request }: { env: { DB: D1Database }; 
 
     const offset = (page - 1) * pageSize;
 
-    const where: string[] = [];
-    const params: unknown[] = [];
+    const where: string[] = ['tenant_id = ?'];
+    const params: unknown[] = [tenantId];
 
     if (houseTypes.length) {
       where.push(`(house_type IN (${houseTypes.map(() => "?").join(", ")}))`);
@@ -21,7 +24,7 @@ export async function onRequestGet({ env, request }: { env: { DB: D1Database }; 
       params.push(`%${filter}%`, `%${filter}%`, `%${filter}%`);
     }
 
-    const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+    const whereSql = `WHERE ${where.join(" AND ")}`;
 
     const tableCheck = await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='residents'").first();
     if (!tableCheck) {
@@ -69,9 +72,9 @@ export async function onRequestGet({ env, request }: { env: { DB: D1Database }; 
 
 export async function onRequestPost({ env, request }: { env: { DB: D1Database }; request: Request }) {
   try {
+    const tenantId = getTenantId(request);
     const body = await request.json();
 
-    // Validate required fields
     // Validate required fields
     if (!body.houseNo) {
       return new Response(JSON.stringify({ error: "House number is required" }), {
@@ -96,13 +99,14 @@ export async function onRequestPost({ env, request }: { env: { DB: D1Database };
       await env.DB.prepare(
         `CREATE TABLE IF NOT EXISTS residents (
           id TEXT PRIMARY KEY,
+          tenant_id TEXT NOT NULL DEFAULT 'default',
           house_no TEXT NOT NULL,
           house_type TEXT NOT NULL,
           owners_json TEXT NOT NULL,
           vehicles_json TEXT NOT NULL
         )`
       ).run();
-      await env.DB.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_residents_house_no ON residents(house_no)`).run();
+      await env.DB.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_residents_house_no ON residents(tenant_id, house_no)`).run();
     }
 
     const id = crypto.randomUUID();
@@ -125,8 +129,8 @@ export async function onRequestPost({ env, request }: { env: { DB: D1Database };
           .filter((v) => v.brand && v.model && v.plate)
       : [];
 
-    // Check if house number already exists
-    const existingHouse = await env.DB.prepare("SELECT id FROM residents WHERE house_no = ?").bind(houseNo).first();
+    // Check if house number already exists for this tenant
+    const existingHouse = await env.DB.prepare("SELECT id FROM residents WHERE tenant_id = ? AND house_no = ?").bind(tenantId, houseNo).first();
 
     if (existingHouse) {
       return new Response(JSON.stringify({ error: "House number already exists" }), {
@@ -136,11 +140,11 @@ export async function onRequestPost({ env, request }: { env: { DB: D1Database };
     }
 
     const insertSql = `
-      INSERT INTO residents (id, house_no, house_type, owners_json, vehicles_json)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO residents (id, tenant_id, house_no, house_type, owners_json, vehicles_json)
+      VALUES (?, ?, ?, ?, ?, ?)
     `;
 
-    await env.DB.prepare(insertSql).bind(id, houseNo, houseType, JSON.stringify(owners), JSON.stringify(vehicles)).run();
+    await env.DB.prepare(insertSql).bind(id, tenantId, houseNo, houseType, JSON.stringify(owners), JSON.stringify(vehicles)).run();
 
     const newResident = {
       id,

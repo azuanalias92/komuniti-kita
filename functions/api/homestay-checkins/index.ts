@@ -1,14 +1,16 @@
+import { hasPermission, getTenantId } from '../_lib/auth'
+
 export async function onRequestGet({ env, request }: { env: { DB: D1Database }; request: Request }) {
   try {
     // Check permission
-    const authHeader = request.headers.get("Authorization");
-    if (!authHeader || !(await hasPermission(env, authHeader, "/check-in-logs", "read"))) {
+    if (!(await hasPermission(env, request, "/check-in-logs", "read"))) {
       return new Response(JSON.stringify({ error: "forbidden" }), {
         status: 403,
         headers: { "content-type": "application/json" },
       });
     }
 
+    const tenantId = getTenantId(request);
     const url = new URL(request.url);
     const page = Math.max(1, Number(url.searchParams.get("page") || "1"));
     const pageSize = Math.max(1, Math.min(100, Number(url.searchParams.get("pageSize") || "10")));
@@ -27,23 +29,25 @@ export async function onRequestGet({ env, request }: { env: { DB: D1Database }; 
         INNER JOIN (
           SELECT homestay_id, MAX(submitted_at) AS max_submitted
           FROM homestay_checkins
+          WHERE tenant_id = ?
           GROUP BY homestay_id
         ) latest ON latest.homestay_id = hc.homestay_id AND latest.max_submitted = hc.submitted_at
+        WHERE hc.tenant_id = ?
         ORDER BY hc.homestay_id ASC
       `;
-      const result = await env.DB.prepare(sql).all();
+      const result = await env.DB.prepare(sql).bind(tenantId, tenantId).all();
       const data = (result.results || []).map(mapRow);
       if (!data.length) return new Response(null, { status: 204 });
       return Response.json({ data });
     }
 
-    const where: string[] = [];
-    const params: unknown[] = [];
+    const where: string[] = ['tenant_id = ?'];
+    const params: unknown[] = [tenantId];
     if (homestayId) {
       where.push("homestay_id = ?");
       params.push(homestayId);
     }
-    const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+    const whereSql = `WHERE ${where.join(" AND ")}`;
     const offset = (page - 1) * pageSize;
 
     const countStmt = env.DB.prepare(`SELECT COUNT(*) as count FROM homestay_checkins ${whereSql}`);
@@ -74,6 +78,7 @@ export async function onRequestPost({ env, request }: { env: { DB: D1Database };
   try {
     // Public endpoint - no permission check needed for creating check-ins
 
+    const tenantId = getTenantId(request);
     const body = await request.json();
 
     if (!body.homestayId || !body.personInCharge || !body.numberOfGuests) {
@@ -88,6 +93,7 @@ export async function onRequestPost({ env, request }: { env: { DB: D1Database };
       await env.DB.prepare(
         `CREATE TABLE IF NOT EXISTS homestay_checkins (
           id TEXT PRIMARY KEY,
+          tenant_id TEXT NOT NULL DEFAULT 'default',
           homestay_id TEXT NOT NULL,
           person_in_charge TEXT NOT NULL,
           guests INTEGER NOT NULL,
@@ -98,7 +104,7 @@ export async function onRequestPost({ env, request }: { env: { DB: D1Database };
           submitted_at TEXT NOT NULL
         )`
       ).run();
-      await env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_hc_homestay_submitted ON homestay_checkins(homestay_id, submitted_at)`).run();
+      await env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_hc_homestay_submitted ON homestay_checkins(tenant_id, homestay_id, submitted_at)`).run();
     }
 
     const id = crypto.randomUUID();
@@ -117,11 +123,11 @@ export async function onRequestPost({ env, request }: { env: { DB: D1Database };
     const submittedAt = new Date().toISOString();
 
     const insertSql = `
-      INSERT INTO homestay_checkins (id, homestay_id, person_in_charge, guests, plates_json, arrival, departure, notes, submitted_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO homestay_checkins (id, tenant_id, homestay_id, person_in_charge, guests, plates_json, arrival, departure, notes, submitted_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
-    await env.DB.prepare(insertSql).bind(id, homestayId, personInCharge, numberOfGuests, JSON.stringify(plates), arrival, departure, notes, submittedAt).run();
+    await env.DB.prepare(insertSql).bind(id, tenantId, homestayId, personInCharge, numberOfGuests, JSON.stringify(plates), arrival, departure, notes, submittedAt).run();
 
     const created = {
       id,
@@ -167,36 +173,4 @@ function mapRow(row: any) {
     additionalNotes: row.notes,
     submittedAt: row.submitted_at,
   };
-}
-
-async function hasPermission(env: { DB: D1Database }, authHeader: string, resource: string, action: string): Promise<boolean> {
-  try {
-    // Extract role from auth header (simplified - in real app, verify JWT token)
-    const token = authHeader.replace("Bearer ", "");
-    if (token === "mock-access-token") return true;
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    const userRole = Array.isArray(payload.role) ? payload.role[0] : payload.role;
-
-    if (!userRole) return false;
-
-    // Admin/Owner bypass
-    if (userRole.toLowerCase() === "admin" || userRole.toLowerCase() === "superadmin") return true;
-
-    // Get role permissions
-    const role = await env.DB.prepare(`SELECT id FROM roles WHERE lower(name) = lower(?)`).bind(userRole).first();
-    if (!role) return false;
-
-    // Check permission for the requested resource OR 'homestay-checkins' as fallback
-    const permission = await env.DB.prepare(
-      `SELECT ${action === "create" ? "can_create" : action === "read" ? "can_read" : action === "update" ? "can_update" : "can_delete"} as allowed
-       FROM role_permissions 
-       WHERE role_id = ? AND (resource = ? OR resource = 'homestay-checkins')`
-    )
-      .bind((role as any).id, resource)
-      .first();
-
-    return permission ? (permission as any).allowed === 1 : false;
-  } catch {
-    return false;
-  }
 }

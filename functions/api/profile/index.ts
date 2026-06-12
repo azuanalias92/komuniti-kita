@@ -1,5 +1,8 @@
+import { getTenantId } from '../_lib/auth'
+
 export async function onRequestGet({ env, request }: { env: { DB: D1Database }; request: Request }) {
   try {
+    const tenantId = getTenantId(request);
     const url = new URL(request.url)
     const email = url.searchParams.get('email') || ''
     if (!email) return new Response(JSON.stringify({ error: 'invalid_email' }), { status: 400, headers: { 'content-type': 'application/json' } })
@@ -8,8 +11,8 @@ export async function onRequestGet({ env, request }: { env: { DB: D1Database }; 
     if (!tableCheck) return new Response(null, { status: 204 })
 
     const row = await env.DB.prepare(
-      `SELECT id, username, email, first_name, last_name, phone_number FROM users WHERE email = ? LIMIT 1`
-    ).bind(email).first()
+      `SELECT id, username, email, first_name, last_name, phone_number FROM users WHERE tenant_id = ? AND email = ? LIMIT 1`
+    ).bind(tenantId, email).first()
 
     if (!row) return new Response(null, { status: 204 })
     return Response.json(row)
@@ -20,6 +23,7 @@ export async function onRequestGet({ env, request }: { env: { DB: D1Database }; 
 
 export async function onRequestPatch({ env, request }: { env: { DB: D1Database }; request: Request }) {
   try {
+    const tenantId = getTenantId(request);
     const contentType = request.headers.get('content-type') || ''
     if (!contentType.includes('application/json')) return new Response(JSON.stringify({ error: 'invalid_content_type' }), { status: 400, headers: { 'content-type': 'application/json' } })
 
@@ -43,10 +47,11 @@ export async function onRequestPatch({ env, request }: { env: { DB: D1Database }
     if (phoneNumber !== undefined) { fields.push('phone_number = ?'); params.push(phoneNumber) }
     fields.push('updated_at = ?'); params.push(now)
     params.push(email)
+    params.push(tenantId)
 
     if (fields.length === 1) return new Response(JSON.stringify({ error: 'no_fields' }), { status: 400, headers: { 'content-type': 'application/json' } })
 
-    const sql = `UPDATE users SET ${fields.join(', ')} WHERE email = ?`
+    const sql = `UPDATE users SET ${fields.join(', ')} WHERE email = ? AND tenant_id = ?`
     await env.DB.prepare(sql).bind(...params).run()
     return Response.json({ success: true })
   } catch (e) {

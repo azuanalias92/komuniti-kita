@@ -7,13 +7,7 @@ export const sidebarData: SidebarData = {
     email: "satnaingdev@gmail.com",
     avatar: "/avatars/shadcn.jpg",
   },
-  teams: [
-    {
-      name: "KomunitiKita",
-      logo: Command,
-      plan: "Vite + ShadcnUI",
-    },
-  ],
+  teams: [],
   navGroups: [
     {
       title: "General",

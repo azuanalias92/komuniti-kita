@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 import { useNavigate } from '@tanstack/react-router'
 import { useAuthStore } from '@/stores/auth-store'
+import { syncTenantAfterAuth } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -66,6 +67,7 @@ export function SignUpForm({
       const json = await res.json()
       auth.setUser(json.user)
       auth.setAccessToken(json.accessToken)
+      syncTenantAfterAuth()
       navigate({ to: '/', replace: true })
       return `Account created for ${data.email}`
     })()

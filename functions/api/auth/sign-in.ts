@@ -1,11 +1,6 @@
-async function sha256(input: string): Promise<string> {
-  const data = new TextEncoder().encode(input);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-}
+import { sha256, generateToken } from "../_lib/auth";
 
-export async function onRequestPost({ request, env }: { request: Request; env: { DB: D1Database } }) {
+export async function onRequestPost({ request, env }: { request: Request; env: { DB: D1Database; JWT_SECRET?: string } }) {
   const contentType = request.headers.get("content-type") || "";
   if (!contentType.includes("application/json")) {
     return new Response(JSON.stringify({ error: "invalid_content_type" }), {
@@ -13,10 +8,11 @@ export async function onRequestPost({ request, env }: { request: Request; env: {
       headers: { "content-type": "application/json" },
     });
   }
+
   const body = await request.json();
-  console.log("body", body);
   const email = typeof body.email === "string" ? body.email : "";
   const password = typeof body.password === "string" ? body.password : "";
+
   if (!email || !password) {
     return new Response(JSON.stringify({ error: "invalid_credentials" }), {
       status: 400,
@@ -24,25 +20,52 @@ export async function onRequestPost({ request, env }: { request: Request; env: {
     });
   }
 
+  // Fallback: no DB available (dev mode)
   if (!env || !(env as any).DB || typeof (env as any).DB.prepare !== "function") {
     const localId = email ? email.split("@")[0] : "user";
     const user = {
       accountNo: localId,
       email,
       role: ["admin"],
+      tenantId: "default",
+      tenantName: "KomunitiKita",
+      tenantSlug: "komuniti-kita",
       exp: Date.now() + 24 * 60 * 60 * 1000,
     };
-    const accessToken = "mock-access-token";
+    const jwtSecret = env.JWT_SECRET || "dev-jwt-secret-change-in-production";
+    const accessToken = await generateToken(
+      {
+        sub: localId,
+        email,
+        role: ["admin"],
+        tenantId: "default",
+        tenantName: "KomunitiKita",
+      },
+      jwtSecret
+    );
     return new Response(JSON.stringify({ user, accessToken }), {
       headers: { "content-type": "application/json" },
     });
   }
 
+  // Ensure schema
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS tenants (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      slug TEXT UNIQUE NOT NULL,
+      settings TEXT DEFAULT '{}',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )`
+  ).run();
+
   await env.DB.prepare(
     `CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL DEFAULT 'default',
       username TEXT,
-      email TEXT UNIQUE,
+      email TEXT,
       first_name TEXT,
       last_name TEXT,
       phone_number TEXT,
@@ -51,24 +74,30 @@ export async function onRequestPost({ request, env }: { request: Request; env: {
       password_hash TEXT,
       password_updated_at TEXT,
       created_at TEXT,
-      updated_at TEXT
+      updated_at TEXT,
+      UNIQUE(tenant_id, email)
     )`
   ).run();
 
-  const selectSql = `SELECT id, username, email, first_name, last_name, phone_number, status, role, password_hash FROM users WHERE email = ?`;
+  const selectSql = `SELECT id, tenant_id, username, email, first_name, last_name, phone_number, status, role, password_hash FROM users WHERE email = ?`;
   let row = (await env.DB.prepare(selectSql).bind(email).first()) as Record<string, unknown> | null;
-  console.log("row", row);
+
   if (!row) {
+    // Auto-create user with default tenant
+    const tenantId = "default";
+    await env.DB.prepare(
+      `INSERT OR IGNORE INTO tenants (id, name, slug, settings, created_at, updated_at)
+       VALUES ('default', 'KomunitiKita', 'komuniti-kita', '{}', datetime('now'), datetime('now'))`
+    ).run();
+
     const id = crypto.randomUUID();
     const username = email.split("@")[0];
     const now = new Date().toISOString();
     const passwordHash = await sha256(password);
     await env.DB.prepare(
-      `INSERT OR IGNORE INTO users (id, username, email, status, role, password_hash, password_updated_at, created_at, updated_at)
-       VALUES (?, ?, ?, 'active', 'admin', ?, ?, ?, ?)`
-    )
-      .bind(id, username, email, passwordHash, now, now, now)
-      .run();
+      `INSERT OR IGNORE INTO users (id, tenant_id, username, email, status, role, password_hash, password_updated_at, created_at, updated_at)
+       VALUES (?, ?, ?, ?, 'active', 'admin', ?, ?, ?, ?)`
+    ).bind(id, tenantId, username, email, passwordHash, now, now, now).run();
     row = (await env.DB.prepare(selectSql).bind(email).first()) as Record<string, unknown> | null;
     if (!row) {
       return new Response(JSON.stringify({ error: "invalid_credentials" }), {
@@ -77,10 +106,8 @@ export async function onRequestPost({ request, env }: { request: Request; env: {
       });
     }
   }
-  console.log("password", password);
+
   const hash = await sha256(password);
-  console.log("hash", hash);
-  console.log("row.password_hash", String(row.password_hash || ""));
   if (String(row.password_hash || "") !== hash) {
     return new Response(JSON.stringify({ error: "invalid_credentials" }), {
       status: 401,
@@ -88,13 +115,35 @@ export async function onRequestPost({ request, env }: { request: Request; env: {
     });
   }
 
+  const tenantId = String(row.tenant_id || "default");
+
+  // Get tenant name
+  const tenant = await env.DB.prepare(
+    `SELECT name, slug FROM tenants WHERE id = ?`
+  ).bind(tenantId).first() as { name: string; slug: string } | null;
+
+  const jwtSecret = env.JWT_SECRET || "dev-jwt-secret-change-in-production";
+  const accessToken = await generateToken(
+    {
+      sub: String(row.id || ""),
+      email: String(row.email || email),
+      role: [String(row.role || "owner")],
+      tenantId,
+      tenantName: tenant?.name || "KomunitiKita",
+    },
+    jwtSecret
+  );
+
   const user = {
     accountNo: String(row.id || ""),
     email: String(row.email || email),
     role: [String(row.role || "owner")],
+    tenantId,
+    tenantName: tenant?.name || "KomunitiKita",
+    tenantSlug: tenant?.slug || "komuniti-kita",
     exp: Date.now() + 24 * 60 * 60 * 1000,
   };
-  const accessToken = "mock-access-token";
+
   return new Response(JSON.stringify({ user, accessToken }), {
     headers: { "content-type": "application/json" },
   });

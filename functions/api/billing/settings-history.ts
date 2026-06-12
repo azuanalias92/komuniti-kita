@@ -1,7 +1,10 @@
-export async function onRequestGet({ env }: { env: { DB: D1Database } }) {
+import { getTenantId } from '../../_lib/auth'
+
+export async function onRequestGet({ env, request }: { env: { DB: D1Database }; request: Request }) {
   try {
     await ensureHistory(env.DB)
-    const res = await env.DB.prepare('SELECT * FROM billing_settings_history ORDER BY changed_at DESC').all()
+    const tenantId = getTenantId(request);
+    const res = await env.DB.prepare('SELECT * FROM billing_settings_history WHERE tenant_id = ? ORDER BY changed_at DESC').bind(tenantId).all()
     return new Response(JSON.stringify(res.results || []), { headers: { 'content-type': 'application/json' } })
   } catch (e) {
     return new Response(JSON.stringify({ error: 'Failed to fetch history' }), { status: 500, headers: { 'content-type': 'application/json' } })
@@ -12,6 +15,7 @@ async function ensureHistory(db: D1Database) {
   await db.prepare(`
     CREATE TABLE IF NOT EXISTS billing_settings_history (
       id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL DEFAULT 'default',
       prev_rate REAL,
       prev_frequency TEXT,
       prev_qr_key TEXT,
@@ -26,17 +30,4 @@ async function ensureHistory(db: D1Database) {
       changed_by TEXT
     )
   `).run()
-}
-
-interface D1Database {
-  prepare: (query: string) => {
-    run: (...args: any[]) => Promise<any>
-    first: <T = any>() => Promise<T | null>
-    all: () => Promise<{ results: any[] }>
-    bind: (...params: any[]) => {
-      run: (...args: any[]) => Promise<any>
-      first: <T = any>() => Promise<T | null>
-      all: () => Promise<{ results: any[] }>
-    }
-  }
 }

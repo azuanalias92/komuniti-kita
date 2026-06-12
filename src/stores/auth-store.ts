@@ -4,10 +4,13 @@ import { getCookie, setCookie, removeCookie } from '@/lib/cookies'
 const ACCESS_TOKEN = 'thisisjustarandomstring'
 const AUTH_USER = 'auth_user'
 
-interface AuthUser {
+export interface AuthUser {
   accountNo: string
   email: string
   role: string[]
+  tenantId: string
+  tenantName: string
+  tenantSlug?: string
   exp: number
 }
 
@@ -54,6 +57,7 @@ export const useAuthStore = create<AuthState>()((set) => {
       reset: () =>
         set((state) => {
           removeCookie(ACCESS_TOKEN)
+          removeCookie(AUTH_USER)
           return {
             ...state,
             auth: { ...state.auth, user: null, accessToken: '' },
