@@ -12,7 +12,6 @@ import {
 import { DataTableBulkActions as BulkActionsToolbar } from '@/components/data-table'
 import { type User } from '../data/schema'
 import { UsersMultiDeleteDialog } from './users-multi-delete-dialog'
-import { useClerkUsers } from '../hooks/use-clerk-users'
 
 type DataTableBulkActionsProps<TData> = {
   table: Table<TData>
@@ -22,7 +21,6 @@ export function DataTableBulkActions<TData>({
   table,
 }: DataTableBulkActionsProps<TData>) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const { updateUserRole } = useClerkUsers()
   const selectedRows = table.getFilteredSelectedRowModel().rows
 
   const handleBulkStatusChange = (status: 'active' | 'inactive') => {
@@ -56,7 +54,14 @@ export function DataTableBulkActions<TData>({
     
     toast.promise(
       Promise.all(
-        selectedUsers.map(user => updateUserRole(user.id, 'owner'))
+        selectedUsers.map(async (user: User) => {
+          const res = await fetch(`/api/users/${user.id}/role`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ role: 'owner' }),
+          })
+          if (!res.ok) throw new Error(`Failed to update ${user.id}`)
+        })
       ),
       {
         loading: `Making ${selectedUsers.length} user${selectedUsers.length > 1 ? 's' : ''} owner...`,

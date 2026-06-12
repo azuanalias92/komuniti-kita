@@ -15,7 +15,6 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { type User } from '../data/schema'
 import { useUsersContext } from './users-provider'
-import { useClerkUsers } from '../hooks/use-clerk-users'
 import { toast } from 'sonner'
 import { useAclStore } from '@/stores/acl-store'
 
@@ -25,21 +24,24 @@ interface DataTableRowActionsProps {
 
 export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const { setOpen, setCurrentRow, roleList } = useUsersContext()
-  const { updateUserRole } = useClerkUsers()
   const { can } = useAclStore()
   const canUpdate = can('/users', 'update')
   const canDelete = can('/users', 'delete')
 
   const handleRoleChange = async (newRole: string) => {
     try {
-      const result = await updateUserRole(row.original.id, newRole)
-      if (result.success) {
-        toast.success(`User role updated to ${newRole}`)
-      } else {
-        toast.error(result.error || 'Failed to update user role')
+      const res = await fetch(`/api/users/${row.original.id}/role`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: newRole }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to update user role')
       }
+      toast.success(`User role updated to ${newRole}`)
     } catch (error) {
-      toast.error('Failed to update user role')
+      toast.error(error instanceof Error ? error.message : 'Failed to update user role')
     }
   }
 

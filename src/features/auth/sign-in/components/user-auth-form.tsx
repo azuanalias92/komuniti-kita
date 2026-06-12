@@ -88,7 +88,6 @@ export function UserAuthForm({
       const isGuard = roles.includes('guard')
       const allowedForGuard = ['/check-in', '/check-in-logs']
       let redirect = redirectTo || ''
-      if (redirect.startsWith('/clerk/')) redirect = '/users'
       const isAllowedRedirect = allowedForGuard.some((p) => redirect.startsWith(p))
       let targetPath = '/'
       if (configuredStart && configuredStart.startsWith('/')) {
