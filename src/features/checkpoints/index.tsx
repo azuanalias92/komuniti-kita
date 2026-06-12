@@ -5,6 +5,7 @@ import { CheckpointDialog } from "@/features/checkpoints/components/checkpoint-d
 import { Plus } from "lucide-react";
 import { type CheckpointFormData } from "@/features/checkpoints/data/schema";
 import { Main } from "@/components/layout/main";
+import { PageIntro } from "@/components/layout/page-intro";
 import { Header } from "@/components/layout/header";
 import { ProfileDropdown } from "@/components/profile-dropdown";
 import { ThemeSwitch } from "@/components/theme-switch";
@@ -57,19 +58,18 @@ export function CheckpointsPage() {
         </div>
       </Header>
       <Main className="flex flex-1 flex-col gap-6 sm:gap-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight">Checkpoints Management</h2>
-            <p className="text-muted-foreground">View and manage all checkpoints</p>
-          </div>
-
-          {canCreate && (
-            <Button onClick={() => setShowCreateDialog(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              New Checkpoint
-            </Button>
-          )}
-        </div>
+        <PageIntro
+          title="Checkpoints"
+          subtitle="Manage checkpoint names and locations."
+          actions={
+            canCreate ? (
+              <Button onClick={() => setShowCreateDialog(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                New Checkpoint
+              </Button>
+            ) : undefined
+          }
+        />
         <CheckpointsTable search={search} navigate={navigate} />
         <CheckpointDialog open={showCreateDialog} onOpenChange={setShowCreateDialog} onSave={handleCreateCheckpoint} mode="create" />
       </Main>

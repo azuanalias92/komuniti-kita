@@ -73,7 +73,11 @@ export const checkpointsColumns: ColumnDef<Checkpoint>[] = [
     id: 'coordinates',
     header: 'Coordinates',
     cell: ({ row }) => {
-      const { latitude, longitude } = row.original
+      const latitude = Number(row.original.latitude)
+      const longitude = Number(row.original.longitude)
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+        return <Badge variant='outline' className='text-xs'>-</Badge>
+      }
       return (
         <Badge variant='outline' className='text-xs'>
           {latitude.toFixed(6)}, {longitude.toFixed(6)}

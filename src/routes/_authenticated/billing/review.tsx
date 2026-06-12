@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
+import { PageIntro } from '@/components/layout/page-intro'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { Search } from '@/components/search'
@@ -75,12 +76,10 @@ function PaymentReview() {
         </div>
       </Header>
       <Main className="flex flex-1 flex-col gap-4 sm:gap-6">
-        <div className="flex flex-wrap items-end justify-between gap-2">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight">Payment Review</h2>
-            <p className="text-muted-foreground">Verify resident payments and confirm or reject.</p>
-          </div>
-        </div>
+        <PageIntro
+          title="Payment Review"
+          subtitle="Approve or reject submitted payments."
+        />
         <Card>
           <CardHeader>
             <CardTitle>Pending Payments</CardTitle>

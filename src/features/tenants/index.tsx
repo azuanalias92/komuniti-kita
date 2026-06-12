@@ -34,6 +34,7 @@ import {
 import { ConfigDrawer } from '@/components/config-drawer'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
+import { PageIntro } from '@/components/layout/page-intro'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
@@ -134,20 +135,18 @@ export function Tenants() {
       </Header>
 
       <Main className='flex flex-1 flex-col gap-4 sm:gap-6'>
-        <div className='flex flex-wrap items-end justify-between gap-2'>
-          <div>
-            <h2 className='text-2xl font-bold tracking-tight'>Tenant Management</h2>
-            <p className='text-muted-foreground'>
-              Super admin can view all tenants and create new communities.
-            </p>
-          </div>
-          {isSuperAdmin && (
-            <Button className='space-x-1' onClick={() => setOpen(true)}>
-              <span>Add Tenant</span>
-              <Plus size={18} />
-            </Button>
-          )}
-        </div>
+        <PageIntro
+          title='Tenants'
+          subtitle='View and create communities.'
+          actions={
+            isSuperAdmin ? (
+              <Button className='space-x-1' onClick={() => setOpen(true)}>
+                <span>Add Tenant</span>
+                <Plus size={18} />
+              </Button>
+            ) : undefined
+          }
+        />
 
         <Card>
           <CardHeader>

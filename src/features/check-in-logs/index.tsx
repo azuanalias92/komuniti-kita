@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
+import { PageIntro } from "@/components/layout/page-intro";
 import { ProfileDropdown } from "@/components/profile-dropdown";
 import { ThemeSwitch } from "@/components/theme-switch";
 import { Button } from "@/components/ui/button";
@@ -195,18 +196,16 @@ export function CheckInLogs() {
         </div>
       </Header>
       <Main className="flex flex-1 flex-col gap-6 sm:gap-8">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Check-in Logs</h1>
-            <p className="text-muted-foreground">View check-in records grouped by checkpoint</p>
-          </div>
-          <div className="flex gap-2">
+        <PageIntro
+          title="Check-in Logs"
+          subtitle="Review check-in records grouped by checkpoint."
+          actions={
             <Button onClick={exportLogs} variant="outline" size="sm" disabled={totalLogs === 0}>
               <Download className="h-4 w-4 mr-2" />
               Export
             </Button>
-          </div>
-        </div>
+          }
+        />
 
         {/* Filters */}
         <Card className="p-6">

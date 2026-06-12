@@ -1,5 +1,19 @@
 import { addTenantFilter, hasPermission, getTenantId } from '../_lib/auth'
 
+async function ensureCheckpointsTable(db: any) {
+  await db.prepare(
+    `CREATE TABLE IF NOT EXISTS checkpoints (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL DEFAULT 'default',
+      name TEXT,
+      latitude REAL,
+      longitude REAL,
+      created_at TEXT,
+      updated_at TEXT
+    )`
+  ).run()
+}
+
 export async function onRequestGet({ env, request }: { env: { DB: any }; request: Request }) {
   try {
     if (!env || !(env as any).DB || typeof (env as any).DB.prepare !== 'function') {
@@ -32,10 +46,7 @@ export async function onRequestGet({ env, request }: { env: { DB: any }; request
 
     const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : ''
 
-    const tableCheck = await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='checkpoints'").first()
-    if (!tableCheck) {
-      return Response.json({ page, pageSize, total: 0, data: [] })
-    }
+    await ensureCheckpointsTable(env.DB)
 
     const countStmt = env.DB.prepare(`SELECT COUNT(*) as count FROM checkpoints ${whereSql}`)
     const total = (await countStmt.bind(...params).first()) as { count?: number } | null
@@ -63,7 +74,7 @@ export async function onRequestGet({ env, request }: { env: { DB: any }; request
       longitude: Number(row.longitude ?? 0),
       createdAt: new Date(String(row.created_at ?? new Date().toISOString())),
       updatedAt: new Date(String(row.updated_at ?? new Date().toISOString())),
-    }))
+    })).filter((row: any) => row.id && row.name && Number.isFinite(row.latitude) && Number.isFinite(row.longitude))
 
     if (!data.length) {
       return Response.json({ page, pageSize, total: total?.count ?? 0, data: [] })
@@ -110,17 +121,7 @@ export async function onRequestPost({ env, request }: { env: { DB: any }; reques
 
     const tenantId = getTenantId(request);
 
-    await env.DB.prepare(
-      `CREATE TABLE IF NOT EXISTS checkpoints (
-        id TEXT PRIMARY KEY,
-        tenant_id TEXT NOT NULL DEFAULT 'default',
-        name TEXT,
-        latitude REAL,
-        longitude REAL,
-        created_at TEXT,
-        updated_at TEXT
-      )`
-    ).run()
+    await ensureCheckpointsTable(env.DB)
 
     const body = await request.json().catch(() => ({} as any))
     const name = typeof body.name === 'string' ? body.name.trim() : ''

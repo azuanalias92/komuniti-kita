@@ -21,6 +21,10 @@ import { checkpointsColumns as columns } from "./checkpoints-columns";
 import { useAuthStore } from "@/stores/auth-store";
 // removed unused header-related imports
 
+function isValidDate(date: Date) {
+  return !Number.isNaN(date.getTime());
+}
+
 type DataTableProps = {
   data?: Checkpoint[];
   search: Record<string, unknown>;
@@ -69,12 +73,26 @@ export function CheckpointsTable({ data, search, navigate }: DataTableProps) {
       });
       if (res.status === 204) return { data: [] as Checkpoint[], total: 0, pageSize: pagination.pageSize };
       if (!res.ok) throw new Error("Failed to load checkpoints");
-      const json = await res.json();
-      const list = (json.data as any[]).map((c) => ({
-        ...c,
-        createdAt: new Date(c.createdAt),
-        updatedAt: new Date(c.updatedAt),
-      })) as Checkpoint[];
+      const json = await res.json().catch(() => ({ data: [], total: 0, pageSize: pagination.pageSize }));
+      const rawList = Array.isArray(json?.data) ? json.data : [];
+      const list = rawList
+        .map((c: any) => ({
+          id: String(c?.id ?? ""),
+          name: String(c?.name ?? ""),
+          latitude: Number(c?.latitude ?? 0),
+          longitude: Number(c?.longitude ?? 0),
+          createdAt: new Date(c?.createdAt ?? new Date().toISOString()),
+          updatedAt: new Date(c?.updatedAt ?? new Date().toISOString()),
+        }))
+        .filter(
+          (c: Checkpoint) =>
+            c.id &&
+            c.name &&
+            Number.isFinite(c.latitude) &&
+            Number.isFinite(c.longitude) &&
+            isValidDate(c.createdAt) &&
+            isValidDate(c.updatedAt)
+        ) as Checkpoint[];
       return { data: list, total: Number(json.total ?? list.length), pageSize: Number(json.pageSize ?? pagination.pageSize) };
     },
     enabled: !data,

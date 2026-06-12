@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
+import { PageIntro } from '@/components/layout/page-intro'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { Search } from '@/components/search'
@@ -84,12 +85,10 @@ export function Billing() {
         </div>
       </Header>
       <Main className="flex flex-1 flex-col gap-4 sm:gap-6">
-        <div className="flex flex-wrap items-end justify-between gap-2">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight">Billing</h2>
-            <p className="text-muted-foreground">Track payments and balances by house.</p>
-          </div>
-        </div>
+        <PageIntro
+          title="Billing"
+          subtitle="Review balances and payments by house."
+        />
 
         <Card>
           <CardHeader>

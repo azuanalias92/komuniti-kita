@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { useAuthStore } from "@/stores/auth-store";
 import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
+import { PageIntro } from "@/components/layout/page-intro";
 import { ProfileDropdown } from "@/components/profile-dropdown";
 import { ThemeSwitch } from "@/components/theme-switch";
 import { Button } from "@/components/ui/button";
@@ -199,10 +200,12 @@ export function CheckIn() {
         </div>
       </Header>
       <Main className="flex flex-1 flex-col gap-6 sm:gap-8">
+        <PageIntro
+          title="Check In"
+          subtitle="Check in from your current location."
+        />
         <div className="flex flex-col items-center justify-center min-h-[60vh] gap-8">
           <div className="text-center space-y-2">
-            <h1 className="text-4xl font-bold tracking-tight mb-2">Check In</h1>
-            <p className="text-muted-foreground text-lg">Click the button below to check in at your current location.</p>
             <div className="flex flex-col items-center gap-1 text-sm text-muted-foreground">
               <p>Current time: {currentTime.toLocaleTimeString()}</p>
               {coordinates ? (

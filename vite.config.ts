@@ -1,12 +1,20 @@
 import path from 'path'
+import fs from 'fs'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
 import tailwindcss from '@tailwindcss/vite'
 import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+const wranglerToml = fs.readFileSync(path.resolve(__dirname, './wrangler.toml'), 'utf8')
+const wranglerVersion =
+  wranglerToml.match(/^\s*version\s*=\s*"([^"]+)"/m)?.[1] ?? '0.0.0'
+
 // https://vite.dev/config/
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(wranglerVersion),
+  },
   plugins: [
     tanstackRouter({
       target: 'react',

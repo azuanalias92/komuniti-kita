@@ -15,8 +15,8 @@ import { Search } from "@/components/search";
 import { ThemeSwitch } from "@/components/theme-switch";
 import { ConfigDrawer } from "@/components/config-drawer";
 import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Separator } from "@radix-ui/react-separator";
 import { Main } from "@/components/layout/main";
+import { PageIntro } from "@/components/layout/page-intro";
 
 const roleSchema = z.object({
   name: z.string().min(2, "Enter role name"),
@@ -174,12 +174,11 @@ export function Roles() {
           <ProfileDropdown />
         </div>
       </Header>
-      <Main>
-        <div className="space-y-0.5">
-          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Roles</h1>
-          <p className="text-muted-foreground">Manage your roles and set permissions.</p>
-        </div>
-        <Separator className="my-4 lg:my-6" />
+      <Main className="flex flex-1 flex-col gap-6">
+        <PageIntro
+          title="Roles"
+          subtitle="Manage roles and access permissions."
+        />
         <div className="flex flex-1 min-h-0 flex-col gap-6">
           <Card>
             <CardHeader>

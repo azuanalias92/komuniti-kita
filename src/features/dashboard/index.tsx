@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ConfigDrawer } from "@/components/config-drawer";
 import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
+import { PageIntro } from "@/components/layout/page-intro";
 import { ProfileDropdown } from "@/components/profile-dropdown";
 import { Search } from "@/components/search";
 import { ThemeSwitch } from "@/components/theme-switch";
@@ -113,10 +114,11 @@ export function Dashboard() {
       </Header>
 
       {/* ===== Main ===== */}
-      <Main>
-        <div className="mb-2 flex items-center justify-between space-y-2">
-          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-        </div>
+      <Main className="flex flex-1 flex-col gap-6">
+        <PageIntro
+          title="Dashboard"
+          subtitle="View community activity and key totals."
+        />
         <Tabs orientation="vertical" defaultValue="overview" className="space-y-4">
           <div className="w-full overflow-x-auto pb-2">
             <TabsList>

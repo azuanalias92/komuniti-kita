@@ -39,6 +39,11 @@ export const sidebarData: SidebarData = {
               url: "/billing/review",
               requiredPermission: { resource: "/billing", action: "read" },
             },
+            {
+              title: "Settings",
+              url: "/settings/billing",
+              requiredPermission: { resource: "/settings", action: "read" },
+            },
           ],
         },
         {
@@ -118,11 +123,6 @@ export const sidebarData: SidebarData = {
               title: "Appearance",
               url: "/settings/appearance",
               icon: Palette,
-              requiredPermission: { resource: "/settings", action: "read" },
-            },
-            {
-              title: "Billing",
-              url: "/settings/billing",
               requiredPermission: { resource: "/settings", action: "read" },
             },
           ],
