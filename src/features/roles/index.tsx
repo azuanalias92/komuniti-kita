@@ -90,28 +90,31 @@ export function Roles() {
   useEffect(() => {
     if (!selectedRole) return;
     (async () => {
-      const res = await fetch(`/api/roles/${selectedRole.id}`);
-      const json = await res.json();
-      setEditingRole({
-        name: String(json.role?.name || selectedRole.name || ""),
-        description: String(json.role?.description || ""),
-        startPage: String(json.role?.start_page || ""),
-      });
-      const m: Record<string, Crud> = {};
-      for (const r of resourceList()) {
-        m[r] = { create: false, read: true, update: false, delete: false };
-      }
-      for (const p of json.permissions || []) {
-        const r = String(p.resource);
-        if (!m[r]) m[r] = { create: false, read: false, update: false, delete: false };
-        m[r] = {
-          create: Number(p.can_create || 0) === 1,
-          read: Number(p.can_read || 0) === 1,
-          update: Number(p.can_update || 0) === 1,
-          delete: Number(p.can_delete || 0) === 1,
-        };
-      }
-      setMatrix(m);
+      try {
+        const res = await fetch(`/api/roles/${selectedRole.id}`);
+        if (!res.ok) return;
+        const json = await res.json();
+        setEditingRole({
+          name: String(json.role?.name || selectedRole.name || ""),
+          description: String(json.role?.description || ""),
+          startPage: String(json.role?.start_page || ""),
+        });
+        const m: Record<string, Crud> = {};
+        for (const r of resourceList()) {
+          m[r] = { create: false, read: true, update: false, delete: false };
+        }
+        for (const p of json.permissions || []) {
+          const r = String(p.resource);
+          if (!m[r]) m[r] = { create: false, read: false, update: false, delete: false };
+          m[r] = {
+            create: Number(p.can_create || 0) === 1,
+            read: Number(p.can_read || 0) === 1,
+            update: Number(p.can_update || 0) === 1,
+            delete: Number(p.can_delete || 0) === 1,
+          };
+        }
+        setMatrix(m);
+      } catch {}
     })();
   }, [selectedRole?.id]);
 
