@@ -31,13 +31,10 @@ import { Route as AuthenticatedCheckpointsIndexRouteImport } from './routes/_aut
 import { Route as AuthenticatedCheckInIndexRouteImport } from './routes/_authenticated/check-in/index'
 import { Route as AuthenticatedCheckInLogsIndexRouteImport } from './routes/_authenticated/check-in-logs/index'
 import { Route as AuthenticatedBillingIndexRouteImport } from './routes/_authenticated/billing/index'
-import { Route as AuthenticatedSettingsNotificationsRouteImport } from './routes/_authenticated/settings/notifications'
-import { Route as AuthenticatedSettingsDisplayRouteImport } from './routes/_authenticated/settings/display'
 import { Route as AuthenticatedSettingsCheckInRouteImport } from './routes/_authenticated/settings/check-in'
 import { Route as AuthenticatedSettingsChangePasswordRouteImport } from './routes/_authenticated/settings/change-password'
 import { Route as AuthenticatedSettingsBillingRouteImport } from './routes/_authenticated/settings/billing'
 import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings/appearance'
-import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings/account'
 import { Route as AuthenticatedHomestayListHomestayIdRouteImport } from './routes/_authenticated/homestay-list/$homestayId'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
 import { Route as AuthenticatedBillingReviewRouteImport } from './routes/_authenticated/billing/review'
@@ -161,18 +158,6 @@ const AuthenticatedBillingIndexRoute =
     path: '/billing/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedSettingsNotificationsRoute =
-  AuthenticatedSettingsNotificationsRouteImport.update({
-    id: '/notifications',
-    path: '/notifications',
-    getParentRoute: () => AuthenticatedSettingsRouteRoute,
-  } as any)
-const AuthenticatedSettingsDisplayRoute =
-  AuthenticatedSettingsDisplayRouteImport.update({
-    id: '/display',
-    path: '/display',
-    getParentRoute: () => AuthenticatedSettingsRouteRoute,
-  } as any)
 const AuthenticatedSettingsCheckInRoute =
   AuthenticatedSettingsCheckInRouteImport.update({
     id: '/check-in',
@@ -195,12 +180,6 @@ const AuthenticatedSettingsAppearanceRoute =
   AuthenticatedSettingsAppearanceRouteImport.update({
     id: '/appearance',
     path: '/appearance',
-    getParentRoute: () => AuthenticatedSettingsRouteRoute,
-  } as any)
-const AuthenticatedSettingsAccountRoute =
-  AuthenticatedSettingsAccountRouteImport.update({
-    id: '/account',
-    path: '/account',
     getParentRoute: () => AuthenticatedSettingsRouteRoute,
   } as any)
 const AuthenticatedHomestayListHomestayIdRoute =
@@ -236,13 +215,10 @@ export interface FileRoutesByFullPath {
   '/billing/review': typeof AuthenticatedBillingReviewRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/homestay-list/$homestayId': typeof AuthenticatedHomestayListHomestayIdRoute
-  '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/billing': typeof AuthenticatedSettingsBillingRoute
   '/settings/change-password': typeof AuthenticatedSettingsChangePasswordRoute
   '/settings/check-in': typeof AuthenticatedSettingsCheckInRoute
-  '/settings/display': typeof AuthenticatedSettingsDisplayRoute
-  '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/billing/': typeof AuthenticatedBillingIndexRoute
   '/check-in-logs/': typeof AuthenticatedCheckInLogsIndexRoute
   '/check-in/': typeof AuthenticatedCheckInIndexRoute
@@ -268,13 +244,10 @@ export interface FileRoutesByTo {
   '/billing/review': typeof AuthenticatedBillingReviewRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/homestay-list/$homestayId': typeof AuthenticatedHomestayListHomestayIdRoute
-  '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/billing': typeof AuthenticatedSettingsBillingRoute
   '/settings/change-password': typeof AuthenticatedSettingsChangePasswordRoute
   '/settings/check-in': typeof AuthenticatedSettingsCheckInRoute
-  '/settings/display': typeof AuthenticatedSettingsDisplayRoute
-  '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/billing': typeof AuthenticatedBillingIndexRoute
   '/check-in-logs': typeof AuthenticatedCheckInLogsIndexRoute
   '/check-in': typeof AuthenticatedCheckInIndexRoute
@@ -303,13 +276,10 @@ export interface FileRoutesById {
   '/_authenticated/billing/review': typeof AuthenticatedBillingReviewRoute
   '/_authenticated/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/_authenticated/homestay-list/$homestayId': typeof AuthenticatedHomestayListHomestayIdRoute
-  '/_authenticated/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/_authenticated/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/_authenticated/settings/billing': typeof AuthenticatedSettingsBillingRoute
   '/_authenticated/settings/change-password': typeof AuthenticatedSettingsChangePasswordRoute
   '/_authenticated/settings/check-in': typeof AuthenticatedSettingsCheckInRoute
-  '/_authenticated/settings/display': typeof AuthenticatedSettingsDisplayRoute
-  '/_authenticated/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/_authenticated/billing/': typeof AuthenticatedBillingIndexRoute
   '/_authenticated/check-in-logs/': typeof AuthenticatedCheckInLogsIndexRoute
   '/_authenticated/check-in/': typeof AuthenticatedCheckInIndexRoute
@@ -338,13 +308,10 @@ export interface FileRouteTypes {
     | '/billing/review'
     | '/errors/$error'
     | '/homestay-list/$homestayId'
-    | '/settings/account'
     | '/settings/appearance'
     | '/settings/billing'
     | '/settings/change-password'
     | '/settings/check-in'
-    | '/settings/display'
-    | '/settings/notifications'
     | '/billing/'
     | '/check-in-logs/'
     | '/check-in/'
@@ -370,13 +337,10 @@ export interface FileRouteTypes {
     | '/billing/review'
     | '/errors/$error'
     | '/homestay-list/$homestayId'
-    | '/settings/account'
     | '/settings/appearance'
     | '/settings/billing'
     | '/settings/change-password'
     | '/settings/check-in'
-    | '/settings/display'
-    | '/settings/notifications'
     | '/billing'
     | '/check-in-logs'
     | '/check-in'
@@ -404,13 +368,10 @@ export interface FileRouteTypes {
     | '/_authenticated/billing/review'
     | '/_authenticated/errors/$error'
     | '/_authenticated/homestay-list/$homestayId'
-    | '/_authenticated/settings/account'
     | '/_authenticated/settings/appearance'
     | '/_authenticated/settings/billing'
     | '/_authenticated/settings/change-password'
     | '/_authenticated/settings/check-in'
-    | '/_authenticated/settings/display'
-    | '/_authenticated/settings/notifications'
     | '/_authenticated/billing/'
     | '/_authenticated/check-in-logs/'
     | '/_authenticated/check-in/'
@@ -592,20 +553,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBillingIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/settings/notifications': {
-      id: '/_authenticated/settings/notifications'
-      path: '/notifications'
-      fullPath: '/settings/notifications'
-      preLoaderRoute: typeof AuthenticatedSettingsNotificationsRouteImport
-      parentRoute: typeof AuthenticatedSettingsRouteRoute
-    }
-    '/_authenticated/settings/display': {
-      id: '/_authenticated/settings/display'
-      path: '/display'
-      fullPath: '/settings/display'
-      preLoaderRoute: typeof AuthenticatedSettingsDisplayRouteImport
-      parentRoute: typeof AuthenticatedSettingsRouteRoute
-    }
     '/_authenticated/settings/check-in': {
       id: '/_authenticated/settings/check-in'
       path: '/check-in'
@@ -634,13 +581,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsAppearanceRouteImport
       parentRoute: typeof AuthenticatedSettingsRouteRoute
     }
-    '/_authenticated/settings/account': {
-      id: '/_authenticated/settings/account'
-      path: '/account'
-      fullPath: '/settings/account'
-      preLoaderRoute: typeof AuthenticatedSettingsAccountRouteImport
-      parentRoute: typeof AuthenticatedSettingsRouteRoute
-    }
     '/_authenticated/homestay-list/$homestayId': {
       id: '/_authenticated/homestay-list/$homestayId'
       path: '/homestay-list/$homestayId'
@@ -666,27 +606,20 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedSettingsRouteRouteChildren {
-  AuthenticatedSettingsAccountRoute: typeof AuthenticatedSettingsAccountRoute
   AuthenticatedSettingsAppearanceRoute: typeof AuthenticatedSettingsAppearanceRoute
   AuthenticatedSettingsBillingRoute: typeof AuthenticatedSettingsBillingRoute
   AuthenticatedSettingsChangePasswordRoute: typeof AuthenticatedSettingsChangePasswordRoute
   AuthenticatedSettingsCheckInRoute: typeof AuthenticatedSettingsCheckInRoute
-  AuthenticatedSettingsDisplayRoute: typeof AuthenticatedSettingsDisplayRoute
-  AuthenticatedSettingsNotificationsRoute: typeof AuthenticatedSettingsNotificationsRoute
   AuthenticatedSettingsIndexRoute: typeof AuthenticatedSettingsIndexRoute
 }
 
 const AuthenticatedSettingsRouteRouteChildren: AuthenticatedSettingsRouteRouteChildren =
   {
-    AuthenticatedSettingsAccountRoute: AuthenticatedSettingsAccountRoute,
     AuthenticatedSettingsAppearanceRoute: AuthenticatedSettingsAppearanceRoute,
     AuthenticatedSettingsBillingRoute: AuthenticatedSettingsBillingRoute,
     AuthenticatedSettingsChangePasswordRoute:
       AuthenticatedSettingsChangePasswordRoute,
     AuthenticatedSettingsCheckInRoute: AuthenticatedSettingsCheckInRoute,
-    AuthenticatedSettingsDisplayRoute: AuthenticatedSettingsDisplayRoute,
-    AuthenticatedSettingsNotificationsRoute:
-      AuthenticatedSettingsNotificationsRoute,
     AuthenticatedSettingsIndexRoute: AuthenticatedSettingsIndexRoute,
   }
 

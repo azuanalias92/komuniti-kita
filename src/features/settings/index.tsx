@@ -8,7 +8,7 @@ export function Settings() {
     <>
       <Header />
       <Main className="flex flex-1 flex-col gap-4">
-        <PageIntro title="Configuration" subtitle="Manage Check-in Settings." />
+        <PageIntro title="Settings" subtitle="Manage your account, security, and preferences." />
         <Outlet />
       </Main>
     </>
