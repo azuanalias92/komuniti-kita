@@ -1,4 +1,24 @@
-import { LayoutDashboard, Settings, Users, UserCog, Palette, Lock, CheckCircle, MapPin, Home, BookUser, CreditCard, Building2 } from "lucide-react";
+import {
+  LayoutDashboard,
+  Settings,
+  Users,
+  UserCog,
+  Bolt,
+  Palette,
+  Lock,
+  CheckCircle,
+  MapPin,
+  Home,
+  BookUser,
+  CreditCard,
+  Building2,
+  FlagTriangleRight,
+  Logs,
+  Receipt,
+  ScanSearch,
+  List,
+  SquarePen,
+} from "lucide-react";
 import { type SidebarData } from "../types";
 
 export const sidebarData: SidebarData = {
@@ -25,56 +45,10 @@ export const sidebarData: SidebarData = {
           requiredPermission: { resource: "/directory", action: "read" },
         },
         {
-          title: "Financial",
-          icon: CreditCard,
-          requiredPermission: { resource: "/billing", action: "read" },
-          items: [
-            {
-              title: "Billing",
-              url: "/billing",
-              requiredPermission: { resource: "/billing", action: "read" },
-            },
-            {
-              title: "Payment Review",
-              url: "/billing/review",
-              requiredPermission: { resource: "/billing", action: "read" },
-            },
-            {
-              title: "Settings",
-              url: "/settings/billing",
-              requiredPermission: { resource: "/settings", action: "read" },
-            },
-          ],
-        },
-        {
-          title: "Users",
-          url: "/users",
-          icon: Users,
-          requiredPermission: { resource: "/users", action: "read" },
-        },
-        {
           title: "Tenants",
           url: "/tenants",
           icon: Building2,
           requiredPermission: { resource: "/tenants", action: "read" },
-        },
-
-        {
-          title: "Homestay",
-          icon: Home,
-          requiredPermission: { resource: "/homestay", action: "read" },
-          items: [
-            {
-              title: "Homestay Listing",
-              url: "/homestay",
-              requiredPermission: { resource: "/homestay", action: "read" },
-            },
-            {
-              title: "Homestay Record",
-              url: "/homestay-record",
-              requiredPermission: { resource: "/homestay-record", action: "read" },
-            },
-          ],
         },
         {
           title: "Check In",
@@ -83,22 +57,89 @@ export const sidebarData: SidebarData = {
             {
               title: "Check In",
               url: "/check-in",
+              icon: MapPin,
               requiredPermission: { resource: "/check-in", action: "create" },
             },
             {
               title: "View Logs",
               url: "/check-in-logs",
+              icon: Logs,
               requiredPermission: { resource: "/check-in-logs", action: "read" },
             },
             {
               title: "Checkpoints",
               url: "/checkpoints",
+              icon: FlagTriangleRight,
               requiredPermission: { resource: "/checkpoints", action: "read" },
             },
             {
               title: "Configuration",
               url: "/settings/check-in",
+              icon: Bolt,
               requiredPermission: { resource: "/settings/check-in", action: "read" },
+            },
+          ],
+        },
+        {
+          title: "Financial",
+          icon: CreditCard,
+          requiredPermission: { resource: "/billing", action: "read" },
+          items: [
+            {
+              title: "Billing",
+              url: "/billing",
+              icon: Receipt,
+              requiredPermission: { resource: "/billing", action: "read" },
+            },
+            {
+              title: "Payment Review",
+              url: "/billing/review",
+              icon: ScanSearch,
+              requiredPermission: { resource: "/billing", action: "read" },
+            },
+            {
+              title: "Settings",
+              url: "/settings/billing",
+              icon: Bolt,
+              requiredPermission: { resource: "/settings", action: "read" },
+            },
+          ],
+        },
+        {
+          title: "Homestay",
+          icon: Home,
+          requiredPermission: { resource: "/homestay", action: "read" },
+          items: [
+            {
+              title: "Listing",
+              url: "/homestay",
+              icon: List,
+              requiredPermission: { resource: "/homestay", action: "read" },
+            },
+            {
+              title: "Record",
+              url: "/homestay-record",
+              icon: SquarePen,
+              requiredPermission: { resource: "/homestay-record", action: "read" },
+            },
+          ],
+        },
+
+        {
+          title: "Authentication",
+          icon: Lock,
+          items: [
+            {
+              title: "Users",
+              url: "/users",
+              icon: Users,
+              requiredPermission: { resource: "/users", action: "read" },
+            },
+            {
+              title: "Roles",
+              url: "/roles",
+              icon: CheckCircle,
+              requiredPermission: { resource: "/roles", action: "read" },
             },
           ],
         },
@@ -118,7 +159,6 @@ export const sidebarData: SidebarData = {
               icon: Lock,
               requiredPermission: { resource: "/settings", action: "read" },
             },
-
             {
               title: "Appearance",
               url: "/settings/appearance",
@@ -126,13 +166,6 @@ export const sidebarData: SidebarData = {
               requiredPermission: { resource: "/settings", action: "read" },
             },
           ],
-        },
-
-        {
-          title: "Roles",
-          url: "/roles",
-          icon: CheckCircle,
-          requiredPermission: { resource: "/roles", action: "read" },
         },
       ],
     },

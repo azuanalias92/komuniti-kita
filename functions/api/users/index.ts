@@ -1,6 +1,7 @@
 import { addTenantFilter, hasPermission, getTenantId } from '../_lib/auth'
+import { hashPassword } from '../_lib/password'
 
-async function ensureSchema(env: { DB: D1Database }) {
+async function ensureSchema(env: { DB: any }) {
   await env.DB.prepare(
     `CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
@@ -20,7 +21,7 @@ async function ensureSchema(env: { DB: D1Database }) {
   ).run();
 }
 
-export async function onRequestGet({ request, env }: { request: Request; env: { DB: D1Database } }) {
+export async function onRequestGet({ request, env }: { request: Request; env: { DB: any } }) {
   if (!env || !(env as any).DB || typeof (env as any).DB.prepare !== "function") {
     return new Response(JSON.stringify({ data: [], page: 1, pageSize: 10, total: 0 }), {
       status: 204,
@@ -98,7 +99,7 @@ export async function onRequestGet({ request, env }: { request: Request; env: { 
   });
 }
 
-export async function onRequestPost({ request, env }: { request: Request; env: { DB: D1Database } }) {
+export async function onRequestPost({ request, env }: { request: Request; env: { DB: any } }) {
   try {
     if (!env || !(env as any).DB || typeof (env as any).DB.prepare !== 'function') {
       return new Response(JSON.stringify({ error: 'db_unavailable' }), {
@@ -124,6 +125,7 @@ export async function onRequestPost({ request, env }: { request: Request; env: {
     const phoneNumber = typeof body.phoneNumber === 'string' ? body.phoneNumber.trim() : ''
     const role = typeof body.role === 'string' && body.role.trim() ? body.role.trim() : 'owner'
     const status = typeof body.status === 'string' && body.status.trim() ? body.status.trim() : 'active'
+    const password = typeof body.password === 'string' ? body.password.trim() : ''
 
     if (!username) {
       return new Response(JSON.stringify({ error: 'invalid_username' }), {
@@ -150,12 +152,13 @@ export async function onRequestPost({ request, env }: { request: Request; env: {
 
     const id = crypto.randomUUID()
     const now = new Date().toISOString()
+    const passwordHash = password ? await hashPassword(password) : null
 
     const ok = await env.DB.prepare(
       `INSERT INTO users (id, tenant_id, username, email, first_name, last_name, phone_number, status, role, password_hash, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)`
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
-      .bind(id, tenantId, username, email, firstName, lastName, phoneNumber, status, role, now, now)
+      .bind(id, tenantId, username, email, firstName, lastName, phoneNumber, status, role, passwordHash, now, now)
       .run()
 
     if (!ok.success) {

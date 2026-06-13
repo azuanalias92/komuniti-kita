@@ -2,19 +2,16 @@ import { useQuery } from "@tanstack/react-query";
 // import { Button } from ":/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ConfigDrawer } from "@/components/config-drawer";
 import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
 import { PageIntro } from "@/components/layout/page-intro";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
 import { Overview } from "./components/overview";
 import { RecentCheckins } from "./components/recent-checkins";
 import { Users, CheckCircle, Car, UserCheck } from "lucide-react";
 import { useAuthStore } from "@/stores/auth-store";
 import { parseISO, startOfDay, endOfDay, subDays, format } from "date-fns";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
+import { cn } from "@/lib/utils";
 
 export function Dashboard() {
   // Removed unused queries to avoid unnecessary API calls and potential 204 handling issues
@@ -104,96 +101,90 @@ export function Dashboard() {
   return (
     <>
       {/* ===== Top Heading ===== */}
-      <Header>
-        <div className="ms-auto flex items-center space-x-4">
-          <Search />
-          <ThemeSwitch />
-          <ConfigDrawer />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header />
 
       {/* ===== Main ===== */}
-      <Main className="flex flex-1 flex-col gap-6">
-        <PageIntro
-          title="Dashboard"
-          subtitle="View community activity and key totals."
-        />
-        <Tabs orientation="vertical" defaultValue="overview" className="space-y-4">
-          <div className="w-full overflow-x-auto pb-2">
-            <TabsList>
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="check-in-report">Check-in Report</TabsTrigger>
-            </TabsList>
-          </div>
-          <TabsContent value="overview" className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Residents</CardTitle>
-                  <Users className="text-muted-foreground h-4 w-4" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{totalResidents}</div>
-                  <p className="text-muted-foreground text-xs">Registered residents</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Registered Vehicles</CardTitle>
-                  <Car className="text-muted-foreground h-4 w-4" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{totalVehicles}</div>
-                  <p className="text-muted-foreground text-xs">Total vehicles</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Currently Staying</CardTitle>
-                  <UserCheck className="text-muted-foreground h-4 w-4" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{currentlyStaying}</div>
-                  <p className="text-muted-foreground text-xs">Active homestays</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Today's Check-ins</CardTitle>
-                  <CheckCircle className="text-muted-foreground h-4 w-4" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{todayCheckins}</div>
-                  <p className="text-muted-foreground text-xs">New arrivals today</p>
-                </CardContent>
-              </Card>
-            </div>
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
-              <Card className="col-span-1 lg:col-span-4">
-                <CardHeader>
-                  <CardTitle>Monthly Check-ins</CardTitle>
-                  <CardDescription>Homestay check-ins over the last 12 months</CardDescription>
-                </CardHeader>
-                <CardContent className="ps-2">
-                  <Overview checkinsData={checkinsData || []} />
-                </CardContent>
-              </Card>
-              <Card className="col-span-1 lg:col-span-3">
-                <CardHeader>
-                  <CardTitle>Recent Check-ins</CardTitle>
-                  <CardDescription>Latest homestay check-ins</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <RecentCheckins />
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-          <TabsContent value="check-in-report" className="space-y-4">
-            <CheckInReportPanel />
-          </TabsContent>
-        </Tabs>
+      <Main className="flex flex-1 flex-col gap-4">
+        <PageIntro title="Dashboard" subtitle="View community activity and key totals." />
+        <Card className={cn('max-sm:has-[div[role="toolbar"]]:mb-16', "flex flex-1 flex-col")}>
+          <CardContent className="flex flex-1 flex-col gap-4">
+            <Tabs orientation="vertical" defaultValue="overview" className="space-y-4">
+              <div className="w-full overflow-x-auto">
+                <TabsList>
+                  <TabsTrigger value="overview">Overview</TabsTrigger>
+                  <TabsTrigger value="check-in-report">Check-in Report</TabsTrigger>
+                </TabsList>
+              </div>
+              <TabsContent value="overview" className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Total Residents</CardTitle>
+                      <Users className="text-muted-foreground h-4 w-4" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{totalResidents}</div>
+                      <p className="text-muted-foreground text-xs">Registered residents</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Registered Vehicles</CardTitle>
+                      <Car className="text-muted-foreground h-4 w-4" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{totalVehicles}</div>
+                      <p className="text-muted-foreground text-xs">Total vehicles</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Currently Staying</CardTitle>
+                      <UserCheck className="text-muted-foreground h-4 w-4" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{currentlyStaying}</div>
+                      <p className="text-muted-foreground text-xs">Active homestays</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Today's Check-ins</CardTitle>
+                      <CheckCircle className="text-muted-foreground h-4 w-4" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{todayCheckins}</div>
+                      <p className="text-muted-foreground text-xs">New arrivals today</p>
+                    </CardContent>
+                  </Card>
+                </div>
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
+                  <Card className="col-span-1 lg:col-span-4">
+                    <CardHeader>
+                      <CardTitle>Monthly Check-ins</CardTitle>
+                      <CardDescription>Homestay check-ins over the last 12 months</CardDescription>
+                    </CardHeader>
+                    <CardContent className="ps-2">
+                      <Overview checkinsData={checkinsData || []} />
+                    </CardContent>
+                  </Card>
+                  <Card className="col-span-1 lg:col-span-3">
+                    <CardHeader>
+                      <CardTitle>Recent Check-ins</CardTitle>
+                      <CardDescription>Latest homestay check-ins</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <RecentCheckins />
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+              <TabsContent value="check-in-report" className="space-y-4">
+                <CheckInReportPanel />
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
       </Main>
     </>
   );
@@ -296,7 +287,6 @@ function CheckInReportPanel() {
   const todayEnd = endOfDay(new Date());
   const weekCutoff = subDays(new Date(), 7);
   const monthCutoff = subDays(new Date(), 30);
-
 
   const userNameById = new Map<string, string>();
   (users as any[]).forEach((u) => {

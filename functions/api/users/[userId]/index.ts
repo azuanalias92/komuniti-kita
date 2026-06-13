@@ -1,6 +1,7 @@
 import { getTenantId } from '../../_lib/auth'
+import { hashPassword } from '../../_lib/password'
 
-export async function onRequestPut({ env, request, params }: { env: { DB: D1Database }; request: Request; params: { userId: string } }) {
+export async function onRequestPut({ env, request, params }: { env: { DB: any }; request: Request; params: { userId: string } }) {
   try {
     const tenantId = getTenantId(request);
     const contentType = request.headers.get('content-type') || ''
@@ -19,6 +20,7 @@ export async function onRequestPut({ env, request, params }: { env: { DB: D1Data
     const phoneNumber = String(body.phoneNumber || '').trim()
     const status = ['active','inactive','invited','suspended'].includes(body.status) ? body.status : undefined
     const role = ['admin','owner','guard'].includes(body.role) ? body.role : undefined
+    const password = typeof body.password === 'string' ? body.password.trim() : ''
 
     const existing = await env.DB.prepare('SELECT id FROM users WHERE id = ? AND tenant_id = ?').bind(params.userId, tenantId).first()
     if (!existing) {
@@ -29,6 +31,7 @@ export async function onRequestPut({ env, request, params }: { env: { DB: D1Data
     }
 
     const now = new Date().toISOString()
+    const passwordHash = password ? await hashPassword(password) : null
 
     const updateSql = `
       UPDATE users
@@ -39,6 +42,8 @@ export async function onRequestPut({ env, request, params }: { env: { DB: D1Data
           phone_number = COALESCE(?, phone_number),
           status = COALESCE(?, status),
           role = COALESCE(?, role),
+          password_hash = COALESCE(?, password_hash),
+          password_updated_at = CASE WHEN ? IS NOT NULL THEN ? ELSE password_updated_at END,
           updated_at = ?
       WHERE id = ? AND tenant_id = ?
     `
@@ -51,6 +56,9 @@ export async function onRequestPut({ env, request, params }: { env: { DB: D1Data
       phoneNumber || null,
       status || null,
       role || null,
+      passwordHash,
+      passwordHash,
+      passwordHash ? now : null,
       now,
       params.userId,
       tenantId

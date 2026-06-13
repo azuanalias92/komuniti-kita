@@ -263,16 +263,8 @@ export function TasksTable({ data }: DataTableProps) {
 
   return (
     <>
-      <Card
-        className={cn(
-          'max-sm:has-[div[role="toolbar"]]:mb-16',
-          "flex flex-1 flex-col"
-        )}
-      >
-        <CardContent className="flex flex-1 flex-col gap-4 p-6">
-          {isLoading && <div className="text-muted-foreground">Loading residents...</div>}
-          {error && <div className="text-destructive">{(error as Error).message}</div>}
-
+      <Card className={cn('max-sm:has-[div[role="toolbar"]]:mb-16', "flex flex-1 flex-col")}>
+        <CardContent className="flex flex-1 flex-col gap-4">
           <div className="flex items-center justify-between gap-3">
             <DataTableToolbar
               table={table}
@@ -324,7 +316,8 @@ export function TasksTable({ data }: DataTableProps) {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={columns.length} className="h-24 text-center">
-                      No results.
+                      {isLoading && <div className="text-muted-foreground text-center py-4">Loading residents...</div>}
+                      {error && <div className="text-destructive text-center py-4">{(error as Error).message}</div>}{" "}
                     </TableCell>
                   </TableRow>
                 )}
@@ -334,9 +327,7 @@ export function TasksTable({ data }: DataTableProps) {
           <DataTablePagination table={table} className="mt-auto" />
         </CardContent>
       </Card>
-
       <ResidentDialog open={dialogOpen} onOpenChange={setDialogOpen} resident={selectedResident} onSubmit={handleSubmit} isLoading={isSubmitting} />
-
       <ResidentDeleteDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}

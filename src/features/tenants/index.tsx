@@ -172,7 +172,7 @@ export function Tenants() {
         </div>
       </Header>
 
-      <Main className='flex flex-1 flex-col gap-6'>
+      <Main className='flex flex-1 flex-col gap-4'>
         <PageIntro
           title='Tenants'
           subtitle='View, create, and update communities.'

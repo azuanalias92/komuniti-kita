@@ -21,7 +21,7 @@ export function Settings() {
         </div>
       </Header>
 
-      <Main className="flex flex-1 flex-col gap-6">
+      <Main className="flex flex-1 flex-col gap-4">
         <PageIntro
           title="Settings"
           subtitle="Manage your account and application preferences."

@@ -195,7 +195,7 @@ export function CheckInLogs() {
           <ProfileDropdown />
         </div>
       </Header>
-      <Main className="flex flex-1 flex-col gap-6">
+      <Main className="flex flex-1 flex-col gap-4">
         <PageIntro
           title="Check-in Logs"
           subtitle="Review check-in records grouped by checkpoint."

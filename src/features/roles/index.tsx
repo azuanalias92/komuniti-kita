@@ -174,18 +174,18 @@ export function Roles() {
           <ProfileDropdown />
         </div>
       </Header>
-      <Main className="flex flex-1 flex-col gap-6">
+      <Main className="flex flex-1 flex-col gap-4">
         <PageIntro
           title="Roles"
           subtitle="Manage roles and access permissions."
         />
-        <div className="flex flex-1 min-h-0 flex-col gap-6">
+        <div className="flex flex-1 min-h-0 flex-col gap-4">
           <Card>
             <CardHeader>
               <CardTitle>Roles</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col gap-6 lg:flex-row">
+              <div className="flex flex-col gap-4 lg:flex-row">
                 <div className="flex-1 overflow-x-auto">
                   <Table>
                     <TableHeader>

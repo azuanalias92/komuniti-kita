@@ -38,7 +38,7 @@ function BillingSettings() {
     mutationFn: async (payload: { rate: number; frequency: string; qrKey: string | null; bgKey: string | null; startDate: string }) => {
       const res = await fetch("/api/billing/settings", {
         method: "POST",
-        headers: { "content-type": "application/json", Authorization: `Bearer ${token || 'mock-access-token'}` },
+        headers: { "content-type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify(payload),
       });
       if (!res.ok) {

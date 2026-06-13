@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
+import { syncTenantAfterAuth } from '@/lib/api'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
@@ -23,22 +24,39 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { PasswordInput } from '@/components/password-input'
+import { useAuthStore } from '@/stores/auth-store'
 import { AuthLayout } from '../auth-layout'
 
 const inviteSchema = z.object({
   inviteCode: z.string().min(1, 'Invite code is required'),
 })
 
+const emailSignInSchema = z.object({
+  email: z.email('Email is required'),
+  password: z.string().min(1, 'Password is required'),
+})
+
 export function SignIn() {
   const { error, new_user, email, name } = useSearch({ from: '/(auth)/sign-in' })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isEmailSigningIn, setIsEmailSigningIn] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [tenantName, setTenantName] = useState('')
+  const { auth } = useAuthStore()
 
   const form = useForm<z.infer<typeof inviteSchema>>({
     resolver: zodResolver(inviteSchema),
     defaultValues: {
       inviteCode: '',
+    },
+  })
+
+  const emailSignInForm = useForm<z.infer<typeof emailSignInSchema>>({
+    resolver: zodResolver(emailSignInSchema),
+    defaultValues: {
+      email: '',
+      password: '',
     },
   })
 
@@ -89,6 +107,31 @@ export function SignIn() {
     })
   }
 
+  async function onEmailSignIn(values: z.infer<typeof emailSignInSchema>) {
+    setIsEmailSigningIn(true)
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(values),
+      })
+      const json = await res.json().catch(() => ({}))
+
+      if (!res.ok) {
+        throw new Error(json.error === 'invalid_credentials' ? 'Invalid email or password.' : 'Failed to sign in.')
+      }
+
+      auth.setAccessToken(typeof json.accessToken === 'string' ? json.accessToken : '')
+      auth.setUser(json.user ?? null)
+      syncTenantAfterAuth()
+      window.location.assign('/')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to sign in.')
+    } finally {
+      setIsEmailSigningIn(false)
+    }
+  }
+
   if (isSubmitted) {
     return (
       <AuthLayout>
@@ -125,7 +168,7 @@ export function SignIn() {
           <CardDescription>
             {new_user
               ? 'Signed in with Google! Enter an invite code to join a community.'
-              : 'Sign in to your account using Google'}
+              : 'Sign in with email and password, or continue with Google.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -138,9 +181,60 @@ export function SignIn() {
             </Alert>
           )}
 
-          <Button className='w-full' asChild>
-            <a href='/api/auth/google/start'>Sign in with Google</a>
-          </Button>
+          {!new_user ? (
+            <div className='space-y-4'>
+              <Form {...emailSignInForm}>
+                <form onSubmit={emailSignInForm.handleSubmit(onEmailSignIn)} className='space-y-4'>
+                  <FormField
+                    control={emailSignInForm.control}
+                    name='email'
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input type='email' placeholder='you@example.com' autoComplete='email' {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={emailSignInForm.control}
+                    name='password'
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Password</FormLabel>
+                        <FormControl>
+                          <PasswordInput placeholder='Enter your password' autoComplete='current-password' {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type='submit' className='w-full' disabled={isEmailSigningIn}>
+                    {isEmailSigningIn ? 'Signing in...' : 'Sign in with Email'}
+                  </Button>
+                </form>
+              </Form>
+
+              <div className='relative'>
+                <div className='absolute inset-0 flex items-center'>
+                  <span className='w-full border-t' />
+                </div>
+                <div className='relative flex justify-center text-xs uppercase'>
+                  <span className='bg-card px-2 text-muted-foreground'>Or continue with Google</span>
+                </div>
+              </div>
+
+              <Button className='w-full' variant='outline' asChild>
+                <a href='/api/auth/google/start'>Sign in with Google</a>
+              </Button>
+            </div>
+          ) : (
+            <Button className='w-full' asChild>
+              <a href='/api/auth/google/start'>Sign in with Google</a>
+            </Button>
+          )}
 
           {new_user && (
             <div className='mt-6 space-y-4'>

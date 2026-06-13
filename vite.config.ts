@@ -59,7 +59,8 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:8788',
+        //target: 'http://localhost:8788',
+        target: 'https://komuniti-kita.pages.dev',
         changeOrigin: true,
         rewrite: (path) => path,
       },

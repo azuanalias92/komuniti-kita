@@ -7,6 +7,7 @@ const AUTH_USER = 'auth_user'
 export interface AuthUser {
   accountNo: string
   email: string
+  name?: string
   role: string[]
   tenantId: string
   tenantName: string

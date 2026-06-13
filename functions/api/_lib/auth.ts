@@ -82,15 +82,6 @@ export function getUserFromToken(request: Request): {
   if (!authHeader.startsWith("Bearer ")) return null;
   try {
     const token = authHeader.replace("Bearer ", "");
-    if (token === "mock-access-token") {
-      // Fallback for dev: read from X-User headers
-      return {
-        id: request.headers.get("X-User-ID") || "",
-        email: request.headers.get("X-User-Email") || "",
-        role: (request.headers.get("X-User-Role") || "admin").split(","),
-        tenantId: getTenantId(request),
-      };
-    }
     const payload = decodeTokenPayload(token);
     if (!payload) return null;
     return {
@@ -115,10 +106,6 @@ export async function hasPermission(
 ): Promise<boolean> {
   const authHeader = request.headers.get("Authorization") || "";
   if (!authHeader.startsWith("Bearer ")) return false;
-
-  const token = authHeader.replace("Bearer ", "");
-  // Dev bypass for testing
-  if (token === "mock-access-token") return true;
 
   const user = getUserFromToken(request);
   if (!user) return false;

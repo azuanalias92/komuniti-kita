@@ -87,7 +87,7 @@ export function HomestayCheckins() {
           <ProfileDropdown />
         </div>
       </Header>
-      <Main className="flex flex-1 flex-col gap-6">
+      <Main className="flex flex-1 flex-col gap-4">
         <PageIntro
           title="Homestay"
           subtitle="Review homestay records and open check-in actions."
