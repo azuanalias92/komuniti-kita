@@ -25,7 +25,11 @@ export function CheckIn() {
   const [nearestCheckpoint, setNearestCheckpoint] = useState<{ id: string; name: string } | null>(null);
 
   // Fetch settings and checkpoints
-  const { data: settings } = useQuery({
+  const {
+    data: settings,
+    error: settingsError,
+    isError: hasSettingsError,
+  } = useQuery({
     queryKey: ["check-in-settings"],
     queryFn: async () => {
       const res = await axios.get("/api/settings/check-in", {
@@ -33,6 +37,7 @@ export function CheckIn() {
       });
       return res.data;
     },
+    retry: false,
   });
 
   const { data: checkpoints } = useQuery({
@@ -107,6 +112,18 @@ export function CheckIn() {
       console.error("Failed to fetch last check-in", e);
     }
   };
+
+  const settingsErrorMessage = axios.isAxiosError(settingsError)
+    ? typeof settingsError.response?.data?.error === "string" && settingsError.response?.data?.error
+      ? settingsError.response.data.error
+      : settingsError.response?.status === 401
+        ? "You need to sign in again before checking in."
+        : settingsError.response?.status === 403
+          ? "You do not have permission to access check-in settings."
+          : settingsError.message
+    : settingsError instanceof Error
+      ? settingsError.message
+      : "Failed to load check-in settings.";
 
   // Watch user location
   useEffect(() => {
@@ -218,9 +235,9 @@ export function CheckIn() {
 
               <Button
                 onClick={handleCheckIn}
-                disabled={mutation.isPending || !coordinates}
+                disabled={mutation.isPending || !coordinates || hasSettingsError}
                 className={`w-64 h-64 text-2xl font-bold rounded-full transition-all duration-300 transform hover:scale-105 ${
-                  mutation.isPending || !coordinates
+                  mutation.isPending || !coordinates || hasSettingsError
                     ? "bg-gray-400 cursor-wait"
                     : isNearCheckpoint
                       ? "bg-green-500 hover:bg-green-600 text-white shadow-lg hover:shadow-xl"
@@ -236,6 +253,11 @@ export function CheckIn() {
                   <div className="flex flex-col items-center gap-2">
                     <Loader2 className="h-8 w-8 animate-spin" />
                     <span className="text-sm">Locating...</span>
+                  </div>
+                ) : hasSettingsError ? (
+                  <div className="flex flex-col items-center gap-1 px-6 text-center">
+                    <span>UNAVAILABLE</span>
+                    <span className="text-xs font-normal opacity-90">Settings Error</span>
                   </div>
                 ) : isNearCheckpoint ? (
                   "CHECK IN"
@@ -273,6 +295,11 @@ export function CheckIn() {
               )}
 
               {locationError && <p className="text-destructive text-sm font-medium bg-destructive/10 px-4 py-2 rounded-md">{locationError}</p>}
+              {hasSettingsError && (
+                <p className="text-destructive text-sm font-medium bg-destructive/10 px-4 py-2 rounded-md">
+                  {settingsErrorMessage}
+                </p>
+              )}
 
               {lastCheckIn && (
                 <div className="text-center animate-in fade-in slide-in-from-bottom-4 duration-500">

@@ -1,7 +1,21 @@
-import { getTenantId } from '../_lib/auth'
+import { getTenantId, hasPermission } from '../_lib/auth'
 
-export async function onRequestPut({ env, request, params }: { env: { DB: D1Database }; request: Request; params: { id: string } }) {
+export async function onRequestPut({ env, request, params }: { env: { DB: any }; request: Request; params: { id: string } }) {
   try {
+    if (!env || !(env as any).DB || typeof (env as any).DB.prepare !== 'function') {
+      return new Response(JSON.stringify({ error: 'database_unavailable' }), {
+        status: 503,
+        headers: { 'content-type': 'application/json' },
+      })
+    }
+
+    if (!(await hasPermission(env, request, '/directory', 'update'))) {
+      return new Response(JSON.stringify({ error: 'forbidden' }), {
+        status: 403,
+        headers: { 'content-type': 'application/json' },
+      })
+    }
+
     const { id } = params
     const tenantId = getTenantId(request);
     const body = await request.json()
@@ -35,13 +49,13 @@ export async function onRequestPut({ env, request, params }: { env: { DB: D1Data
             phone: String(owner.phone || '').trim(),
             userId: owner.userId ? String(owner.userId) : undefined,
           }))
-          .filter((o) => o.name && o.phone)
+          .filter((o: { name: string; phone: string }) => o.name && o.phone)
       : []
     const vehicles = Array.isArray(body.vehicles) ? body.vehicles.map((vehicle: any) => ({
       brand: String(vehicle.brand || '').trim(),
       model: String(vehicle.model || '').trim(),
       plate: String(vehicle.plate || '').trim()
-    })).filter(v => v.brand && v.model && v.plate) : []
+    })).filter((v: { brand: string; model: string; plate: string }) => v.brand && v.model && v.plate) : []
 
     // Check if house number already exists for a different resident in this tenant
     const existingHouse = await env.DB.prepare(
@@ -87,8 +101,22 @@ export async function onRequestPut({ env, request, params }: { env: { DB: D1Data
   }
 }
 
-export async function onRequestDelete({ env, request, params }: { env: { DB: D1Database }; request: Request; params: { id: string } }) {
+export async function onRequestDelete({ env, request, params }: { env: { DB: any }; request: Request; params: { id: string } }) {
   try {
+    if (!env || !(env as any).DB || typeof (env as any).DB.prepare !== 'function') {
+      return new Response(JSON.stringify({ error: 'database_unavailable' }), {
+        status: 503,
+        headers: { 'content-type': 'application/json' },
+      })
+    }
+
+    if (!(await hasPermission(env, request, '/directory', 'delete'))) {
+      return new Response(JSON.stringify({ error: 'forbidden' }), {
+        status: 403,
+        headers: { 'content-type': 'application/json' },
+      })
+    }
+
     const { id } = params
     const tenantId = getTenantId(request);
 

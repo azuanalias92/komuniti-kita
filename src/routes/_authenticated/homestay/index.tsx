@@ -1,6 +1,7 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { HomestayCheckins } from '@/features/homestay-booking/components/homestay-checkins'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/_authenticated/homestay/')({
-  component: HomestayCheckins,
+  beforeLoad: () => {
+    throw redirect({ to: '/homestay/listing' })
+  },
 })

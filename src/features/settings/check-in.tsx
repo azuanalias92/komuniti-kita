@@ -18,6 +18,31 @@ const settingsSchema = z.object({
 
 type SettingsFormValues = z.infer<typeof settingsSchema>;
 
+function getApiErrorMessage(error: unknown, fallback: string) {
+  if (axios.isAxiosError(error)) {
+    const status = error.response?.status;
+    const apiError = error.response?.data?.error;
+
+    if (apiError === "forbidden" || status === 403) {
+      return "You do not have permission to update check-in settings.";
+    }
+
+    if (status === 401) {
+      return "You need to sign in again before managing check-in settings.";
+    }
+
+    if (typeof apiError === "string" && apiError.trim()) {
+      return apiError;
+    }
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return fallback;
+}
+
 export function CheckInSettings() {
   const {
     auth: { accessToken },
@@ -25,7 +50,13 @@ export function CheckInSettings() {
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
 
-  const { data: settings, isLoading } = useQuery({
+  const {
+    data: settings,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery<SettingsFormValues>({
     queryKey: ["check-in-settings"],
     queryFn: async () => {
       const res = await axios.get("/api/settings/check-in", {
@@ -33,6 +64,7 @@ export function CheckInSettings() {
       });
       return res.data;
     },
+    retry: false,
   });
 
   const form = useForm<SettingsFormValues>({
@@ -41,7 +73,10 @@ export function CheckInSettings() {
       radius: 50,
       timeWindow: 5,
     },
-    values: settings, // Update form when data loads
+    values: settings ?? {
+      radius: 50,
+      timeWindow: 5,
+    },
   });
 
   const mutation = useMutation({
@@ -57,9 +92,9 @@ export function CheckInSettings() {
       });
       setIsEditing(false);
     },
-    onError: () => {
+    onError: (error) => {
       toast.error("Error", {
-        description: "Failed to update settings.",
+        description: getApiErrorMessage(error, "Failed to update settings."),
       });
     },
   });
@@ -68,7 +103,35 @@ export function CheckInSettings() {
     mutation.mutate(data);
   }
 
-  if (isLoading) return <div>Loading settings...</div>;
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="py-6 text-sm text-muted-foreground">
+          Loading settings...
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col gap-4 py-6">
+          <div>
+            <p className="font-medium text-destructive">Unable to load check-in settings</p>
+            <p className="text-sm text-muted-foreground">
+              {getApiErrorMessage(error, "Failed to fetch settings.")}
+            </p>
+          </div>
+          <div className="flex justify-end">
+            <Button type="button" variant="outline" onClick={() => void refetch()}>
+              Retry
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>

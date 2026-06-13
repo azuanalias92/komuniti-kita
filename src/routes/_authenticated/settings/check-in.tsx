@@ -1,6 +1,7 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { CheckInSettings } from '@/features/settings/check-in'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/_authenticated/settings/check-in')({
-  component: CheckInSettings,
+  beforeLoad: () => {
+    throw redirect({ to: '/check-in/configuration' })
+  },
 })

@@ -1,6 +1,7 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { CheckInLogs } from '@/features/check-in-logs'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/_authenticated/check-in-logs/')({
-  component: CheckInLogs,
+  beforeLoad: () => {
+    throw redirect({ to: '/check-in/logs' })
+  },
 })

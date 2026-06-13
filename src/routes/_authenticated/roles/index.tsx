@@ -1,6 +1,7 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { Roles } from '@/features/roles'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/_authenticated/roles/')({
-  component: Roles,
+  beforeLoad: () => {
+    throw redirect({ to: '/auth/roles' })
+  },
 })

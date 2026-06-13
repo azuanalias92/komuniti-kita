@@ -2,12 +2,25 @@ import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  type ColumnDef,
+  type PaginationState,
+  type SortingState,
+  type VisibilityState,
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { DataTableColumnHeader, DataTablePagination, DataTableToolbar } from "@/components/data-table";
 import { toast } from "sonner";
 import { useAclStore } from "@/stores/acl-store";
 import { Header } from "@/components/layout/header";
@@ -25,6 +38,8 @@ const roleSchema = z.object({
 });
 
 type Crud = { create: boolean; read: boolean; update: boolean; delete: boolean };
+type RoleRow = { id: string; name: string; description: string };
+type AclRow = { resource: string; create: boolean; read: boolean; update: boolean; delete: boolean };
 
 function resourceList() {
   return ["/", "/roles", "/users", "/tenants", "/checkpoints", "/check-in", "/check-in-logs", "/directory", "/homestay", "/settings"];
@@ -35,20 +50,39 @@ export function Roles() {
   const [selectedRole, setSelectedRole] = useState<{ id: string; name: string } | null>(null);
   const [matrix, setMatrix] = useState<Record<string, Crud>>({});
   const [editingRole, setEditingRole] = useState<{ name: string; description: string; startPage: string }>({ name: "", description: "", startPage: "" });
+  const [rolesLoading, setRolesLoading] = useState(true);
+  const [rolesError, setRolesError] = useState("");
+  const [roleTableSorting, setRoleTableSorting] = useState<SortingState>([]);
+  const [roleTableVisibility, setRoleTableVisibility] = useState<VisibilityState>({});
+  const [roleTablePagination, setRoleTablePagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
+  const [aclTableSorting, setAclTableSorting] = useState<SortingState>([]);
+  const [aclTableVisibility, setAclTableVisibility] = useState<VisibilityState>({});
+  const [aclTablePagination, setAclTablePagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const acl = useAclStore();
 
   const form = useForm<z.infer<typeof roleSchema>>({
     resolver: zodResolver(roleSchema),
-    defaultValues: { name: "", description: "" },
+    defaultValues: { name: "", description: "", startPage: "" },
   });
 
   useEffect(() => {
     (async () => {
-      const res = await fetch("/api/roles");
-      const list = await res.json();
-      setRoles(list);
-      if (list.length > 0 && !selectedRole) {
-        setSelectedRole({ id: list[0].id, name: list[0].name });
+      try {
+        setRolesLoading(true);
+        setRolesError("");
+        const res = await fetch("/api/roles");
+        if (!res.ok) {
+          throw new Error("Failed to load roles");
+        }
+        const list = (await res.json()) as RoleRow[];
+        setRoles(list);
+        if (list.length > 0 && !selectedRole) {
+          setSelectedRole({ id: list[0].id, name: list[0].name });
+        }
+      } catch (error) {
+        setRolesError(error instanceof Error ? error.message : "Failed to load roles");
+      } finally {
+        setRolesLoading(false);
       }
     })();
   }, []);
@@ -82,6 +116,133 @@ export function Roles() {
   }, [selectedRole?.id]);
 
   const resources = useMemo(() => resourceList(), []);
+  const aclRows = useMemo<AclRow[]>(
+    () =>
+      resources.map((resource) => ({
+        resource,
+        create: !!matrix[resource]?.create,
+        read: !!matrix[resource]?.read,
+        update: !!matrix[resource]?.update,
+        delete: !!matrix[resource]?.delete,
+      })),
+    [matrix, resources],
+  );
+
+  const roleColumns = useMemo<ColumnDef<RoleRow>[]>(
+    () => [
+      {
+        accessorKey: "name",
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Name" />,
+        cell: ({ row }) => <div className="font-medium">{row.original.name}</div>,
+        enableHiding: false,
+      },
+      {
+        accessorKey: "description",
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Description" />,
+        cell: ({ row }) => <div>{row.original.description || "-"}</div>,
+      },
+      {
+        id: "actions",
+        header: () => <div className="text-right">Action</div>,
+        cell: ({ row }) => (
+          <div className="flex justify-end">
+            <Button size="sm" variant="outline" onClick={() => setSelectedRole({ id: row.original.id, name: row.original.name })}>
+              Edit ACL
+            </Button>
+          </div>
+        ),
+        enableSorting: false,
+        enableHiding: false,
+      },
+    ],
+    [],
+  );
+
+  const aclColumns = useMemo<ColumnDef<AclRow>[]>(
+    () => [
+      {
+        accessorKey: "resource",
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Resource" />,
+        cell: ({ row }) => <div className="font-medium">{row.original.resource}</div>,
+        enableHiding: false,
+      },
+      {
+        accessorKey: "create",
+        header: () => <div className="text-center">Create</div>,
+        cell: ({ row }) => (
+          <div className="flex justify-center">
+            <Checkbox className="h-5 w-5" checked={row.original.create} onCheckedChange={() => toggle(row.original.resource, "create")} />
+          </div>
+        ),
+        enableSorting: false,
+      },
+      {
+        accessorKey: "read",
+        header: () => <div className="text-center">Read</div>,
+        cell: ({ row }) => (
+          <div className="flex justify-center">
+            <Checkbox className="h-5 w-5" checked={row.original.read} onCheckedChange={() => toggle(row.original.resource, "read")} />
+          </div>
+        ),
+        enableSorting: false,
+      },
+      {
+        accessorKey: "update",
+        header: () => <div className="text-center">Update</div>,
+        cell: ({ row }) => (
+          <div className="flex justify-center">
+            <Checkbox className="h-5 w-5" checked={row.original.update} onCheckedChange={() => toggle(row.original.resource, "update")} />
+          </div>
+        ),
+        enableSorting: false,
+      },
+      {
+        accessorKey: "delete",
+        header: () => <div className="text-center">Delete</div>,
+        cell: ({ row }) => (
+          <div className="flex justify-center">
+            <Checkbox className="h-5 w-5" checked={row.original.delete} onCheckedChange={() => toggle(row.original.resource, "delete")} />
+          </div>
+        ),
+        enableSorting: false,
+      },
+    ],
+    [matrix],
+  );
+
+  const rolesTable = useReactTable({
+    data: roles,
+    columns: roleColumns,
+    state: {
+      sorting: roleTableSorting,
+      columnVisibility: roleTableVisibility,
+      pagination: roleTablePagination,
+    },
+    onSortingChange: setRoleTableSorting,
+    onColumnVisibilityChange: setRoleTableVisibility,
+    onPaginationChange: setRoleTablePagination,
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+  });
+
+  const aclTable = useReactTable({
+    data: aclRows,
+    columns: aclColumns,
+    state: {
+      sorting: aclTableSorting,
+      columnVisibility: aclTableVisibility,
+      pagination: aclTablePagination,
+    },
+    onSortingChange: setAclTableSorting,
+    onColumnVisibilityChange: setAclTableVisibility,
+    onPaginationChange: setAclTablePagination,
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+  });
 
   async function onCreateRole(data: z.infer<typeof roleSchema>) {
     const res = await fetch("/api/roles", {
@@ -96,6 +257,7 @@ export function Roles() {
     const role = await res.json();
     setRoles((r) => [...r, role]);
     setSelectedRole({ id: role.id, name: role.name });
+    form.reset({ name: "", description: "", startPage: "" });
     toast.success("Role created");
   }
 
@@ -182,43 +344,57 @@ export function Roles() {
         <PageIntro title="Roles" subtitle="Manage roles and access permissions." />
         <div className="flex flex-1 min-h-0 flex-col gap-4">
           <Card>
-            <CardContent>
-              <div className="flex flex-col gap-4 lg:flex-row">
-                <div className="flex-1 overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead className="hidden sm:table-cell">Description</TableHead>
-                        <TableHead></TableHead>
+            <CardContent className="flex flex-col gap-4 p-6">
+              <DataTableToolbar table={rolesTable} searchPlaceholder="Filter roles..." searchKey="name" />
+              <div className="overflow-x-auto rounded-md border">
+                <Table>
+                  <TableHeader>
+                    {rolesTable.getHeaderGroups().map((headerGroup) => (
+                      <TableRow key={headerGroup.id}>
+                        {headerGroup.headers.map((header) => (
+                          <TableHead key={header.id} colSpan={header.colSpan}>
+                            {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                          </TableHead>
+                        ))}
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {roles.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={3}>No roles yet. Create one on the right.</TableCell>
+                    ))}
+                  </TableHeader>
+                  <TableBody>
+                    {rolesLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={roleColumns.length} className="h-24 text-center">
+                          Loading roles...
+                        </TableCell>
+                      </TableRow>
+                    ) : rolesError ? (
+                      <TableRow>
+                        <TableCell colSpan={roleColumns.length} className="h-24 text-center text-destructive">
+                          {rolesError}
+                        </TableCell>
+                      </TableRow>
+                    ) : rolesTable.getRowModel().rows.length ? (
+                      rolesTable.getRowModel().rows.map((row) => (
+                        <TableRow key={row.id}>
+                          {row.getVisibleCells().map((cell) => (
+                            <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
+                          ))}
                         </TableRow>
-                      ) : (
-                        roles.map((r) => (
-                          <TableRow key={r.id}>
-                            <TableCell className="sticky left-0 bg-background">{r.name}</TableCell>
-                            <TableCell className="hidden sm:table-cell">{r.description}</TableCell>
-                            <TableCell>
-                              <Button size="sm" variant="outline" onClick={() => setSelectedRole({ id: r.id, name: r.name })}>
-                                Edit ACL
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={roleColumns.length} className="h-24 text-center">
+                          No roles yet. Create one below.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
               </div>
+              <DataTablePagination table={rolesTable} className="mt-auto" />
             </CardContent>
           </Card>
           <Card>
-            <CardContent>
+            <CardContent className="p-6">
               <div className="w-full lg:w-90">
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onCreateRole)} className="grid gap-3">
@@ -278,7 +454,7 @@ export function Roles() {
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent className="flex-1 min-h-0">
+              <CardContent className="flex flex-1 min-h-0 flex-col gap-4">
                 <div className="mb-4 grid gap-3 sm:grid-cols-3">
                   <Input value={editingRole.name} onChange={(e) => setEditingRole((s) => ({ ...s, name: e.target.value }))} placeholder="Role name" />
                   <Input value={editingRole.description} onChange={(e) => setEditingRole((s) => ({ ...s, description: e.target.value }))} placeholder="Description" />
@@ -289,37 +465,41 @@ export function Roles() {
                     </Button>
                   </div>
                 </div>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="sticky left-0 bg-background">Resource</TableHead>
-                      <TableHead>Create</TableHead>
-                      <TableHead>Read</TableHead>
-                      <TableHead>Update</TableHead>
-                      <TableHead>Delete</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {resources.map((r) => (
-                      <TableRow key={r}>
-                        <TableCell className="sticky left-0 bg-background">{r}</TableCell>
-                        <TableCell>
-                          <Checkbox className="h-5 w-5" checked={!!matrix[r]?.create} onCheckedChange={() => toggle(r, "create")} />
-                        </TableCell>
-                        <TableCell>
-                          <Checkbox className="h-5 w-5" checked={!!matrix[r]?.read} onCheckedChange={() => toggle(r, "read")} />
-                        </TableCell>
-                        <TableCell>
-                          <Checkbox className="h-5 w-5" checked={!!matrix[r]?.update} onCheckedChange={() => toggle(r, "update")} />
-                        </TableCell>
-                        <TableCell>
-                          <Checkbox className="h-5 w-5" checked={!!matrix[r]?.delete} onCheckedChange={() => toggle(r, "delete")} />
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                <div className="mt-4">
+                <DataTableToolbar table={aclTable} searchPlaceholder="Filter resources..." searchKey="resource" />
+                <div className="overflow-x-auto rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      {aclTable.getHeaderGroups().map((headerGroup) => (
+                        <TableRow key={headerGroup.id}>
+                          {headerGroup.headers.map((header) => (
+                            <TableHead key={header.id} colSpan={header.colSpan}>
+                              {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                            </TableHead>
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableHeader>
+                    <TableBody>
+                      {aclTable.getRowModel().rows.length ? (
+                        aclTable.getRowModel().rows.map((row) => (
+                          <TableRow key={row.id}>
+                            {row.getVisibleCells().map((cell) => (
+                              <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
+                            ))}
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={aclColumns.length} className="h-24 text-center">
+                            No resources found.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+                <DataTablePagination table={aclTable} className="mt-auto" />
+                <div>
                   <Button onClick={onSaveAcl}>Save ACL</Button>
                 </div>
               </CardContent>

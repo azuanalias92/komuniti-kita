@@ -1,7 +1,34 @@
-import { addTenantFilter, getTenantId } from '../_lib/auth'
+import { addTenantFilter, getTenantId, hasPermission } from '../_lib/auth'
+
+async function ensureResidentsTable(db: any) {
+  await db.prepare(
+    `CREATE TABLE IF NOT EXISTS residents (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL DEFAULT 'default',
+      house_no TEXT NOT NULL,
+      house_type TEXT NOT NULL,
+      owners_json TEXT NOT NULL,
+      vehicles_json TEXT NOT NULL
+    )`
+  ).run();
+  await db.prepare(
+    `CREATE UNIQUE INDEX IF NOT EXISTS idx_residents_house_no ON residents(tenant_id, house_no)`
+  ).run();
+}
 
 export async function onRequestGet({ env, request }: { env: { DB: any }; request: Request }) {
   try {
+    if (!env || !(env as any).DB || typeof (env as any).DB.prepare !== 'function') {
+      return new Response(null, { status: 204 });
+    }
+
+    if (!(await hasPermission(env, request, '/directory', 'read'))) {
+      return new Response(JSON.stringify({ error: 'forbidden' }), {
+        status: 403,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+
     const tenantId = getTenantId(request);
     const url = new URL(request.url);
     const page = Math.max(1, Number(url.searchParams.get("page") || "1"));
@@ -26,11 +53,7 @@ export async function onRequestGet({ env, request }: { env: { DB: any }; request
     }
 
     const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
-
-    const tableCheck = await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='residents'").first();
-    if (!tableCheck) {
-      return Response.json({ page, pageSize, total: 0, data: [] });
-    }
+    await ensureResidentsTable(env.DB);
 
     const countStmt = env.DB.prepare(`SELECT COUNT(*) as count FROM residents ${whereSql}`);
     const total = (await countStmt.bind(...params).first()) as { count?: number } | null;
@@ -73,6 +96,20 @@ export async function onRequestGet({ env, request }: { env: { DB: any }; request
 
 export async function onRequestPost({ env, request }: { env: { DB: any }; request: Request }) {
   try {
+    if (!env || !(env as any).DB || typeof (env as any).DB.prepare !== 'function') {
+      return new Response(JSON.stringify({ error: 'database_unavailable' }), {
+        status: 503,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+
+    if (!(await hasPermission(env, request, '/directory', 'create'))) {
+      return new Response(JSON.stringify({ error: 'forbidden' }), {
+        status: 403,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+
     const tenantId = getTenantId(request);
     const body = await request.json();
 
@@ -94,21 +131,7 @@ export async function onRequestPost({ env, request }: { env: { DB: any }; reques
       }
     }
 
-    // Ensure table exists
-    const tableCheck = await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='residents'").first();
-    if (!tableCheck) {
-      await env.DB.prepare(
-        `CREATE TABLE IF NOT EXISTS residents (
-          id TEXT PRIMARY KEY,
-          tenant_id TEXT NOT NULL DEFAULT 'default',
-          house_no TEXT NOT NULL,
-          house_type TEXT NOT NULL,
-          owners_json TEXT NOT NULL,
-          vehicles_json TEXT NOT NULL
-        )`
-      ).run();
-      await env.DB.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_residents_house_no ON residents(tenant_id, house_no)`).run();
-    }
+    await ensureResidentsTable(env.DB);
 
     const id = crypto.randomUUID();
     const houseNo = String(body.houseNo).trim();

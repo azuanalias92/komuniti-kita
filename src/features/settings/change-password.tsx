@@ -33,7 +33,27 @@ export function SettingsChangePassword() {
     },
   });
 
-  const { handleSubmit, formState: { isSubmitting } } = form;
+  const {
+    handleSubmit,
+    formState: { isSubmitting },
+  } = form;
+
+  function getErrorMessage(error: string) {
+    switch (error) {
+      case "unauthorized":
+        return "You need to sign in again before changing your password.";
+      case "invalid_current_password":
+        return "Current password is incorrect.";
+      case "password_too_short":
+        return "New password must be at least 8 characters.";
+      case "user_not_found":
+        return "User account was not found.";
+      case "invalid_content_type":
+        return "Invalid request format.";
+      default:
+        return error || "Failed to update password";
+    }
+  }
 
   const onSubmit = async (data: FormValues) => {
     const email = auth.user?.email || "";
@@ -44,24 +64,30 @@ export function SettingsChangePassword() {
     try {
       const res = await fetch("/api/auth/change-password", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          ...(auth.accessToken ? { Authorization: `Bearer ${auth.accessToken}` } : {}),
+        },
         body: JSON.stringify({
           email,
           currentPassword: data.currentPassword,
           newPassword: data.newPassword,
         }),
       });
-      if (!res.ok) throw new Error("failed");
+      const json = await res.json().catch(() => ({}) as { error?: string; message?: string });
+      if (!res.ok) {
+        throw new Error(getErrorMessage(json.error || json.message || ""));
+      }
       toast.success("Password updated");
       form.reset();
-    } catch {
-      toast.error("Failed to update password");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update password");
     }
   };
 
   return (
     <Card>
-      <CardContent className="pt-6">
+      <CardContent>
         <Form {...form}>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid gap-4 sm:grid-cols-2">
@@ -74,9 +100,7 @@ export function SettingsChangePassword() {
                     <FormControl>
                       <PasswordInput placeholder="********" {...field} />
                     </FormControl>
-                    <p className="text-sm text-muted-foreground">
-                      Leave this blank if you previously signed in with Google and are setting a password for the first time.
-                    </p>
+                    <p className="text-sm text-muted-foreground">Leave this blank if you previously signed in with Google and are setting a password for the first time.</p>
                     <FormMessage />
                   </FormItem>
                 )}

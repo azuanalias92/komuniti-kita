@@ -1,6 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { CheckpointsPage } from '@/features/checkpoints'
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/checkpoints/")({
-  component: CheckpointsPage,
+  beforeLoad: () => {
+    throw redirect({ to: "/check-in/checkpoints" });
+  },
 });

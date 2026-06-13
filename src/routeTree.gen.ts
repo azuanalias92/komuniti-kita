@@ -35,9 +35,17 @@ import { Route as AuthenticatedSettingsCheckInRouteImport } from './routes/_auth
 import { Route as AuthenticatedSettingsChangePasswordRouteImport } from './routes/_authenticated/settings/change-password'
 import { Route as AuthenticatedSettingsBillingRouteImport } from './routes/_authenticated/settings/billing'
 import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings/appearance'
+import { Route as AuthenticatedHomestayRecordRouteImport } from './routes/_authenticated/homestay/record'
+import { Route as AuthenticatedHomestayListingRouteImport } from './routes/_authenticated/homestay/listing'
 import { Route as AuthenticatedHomestayListHomestayIdRouteImport } from './routes/_authenticated/homestay-list/$homestayId'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
+import { Route as AuthenticatedCheckInLogsRouteImport } from './routes/_authenticated/check-in/logs'
+import { Route as AuthenticatedCheckInConfigurationRouteImport } from './routes/_authenticated/check-in/configuration'
+import { Route as AuthenticatedCheckInCheckpointsRouteImport } from './routes/_authenticated/check-in/checkpoints'
+import { Route as AuthenticatedBillingSettingsRouteImport } from './routes/_authenticated/billing/settings'
 import { Route as AuthenticatedBillingReviewRouteImport } from './routes/_authenticated/billing/review'
+import { Route as AuthenticatedAuthUsersRouteImport } from './routes/_authenticated/auth/users'
+import { Route as AuthenticatedAuthRolesRouteImport } from './routes/_authenticated/auth/roles'
 
 const PaymentRoute = PaymentRouteImport.update({
   id: '/payment',
@@ -182,6 +190,18 @@ const AuthenticatedSettingsAppearanceRoute =
     path: '/appearance',
     getParentRoute: () => AuthenticatedSettingsRouteRoute,
   } as any)
+const AuthenticatedHomestayRecordRoute =
+  AuthenticatedHomestayRecordRouteImport.update({
+    id: '/homestay/record',
+    path: '/homestay/record',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedHomestayListingRoute =
+  AuthenticatedHomestayListingRouteImport.update({
+    id: '/homestay/listing',
+    path: '/homestay/listing',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedHomestayListHomestayIdRoute =
   AuthenticatedHomestayListHomestayIdRouteImport.update({
     id: '/homestay-list/$homestayId',
@@ -194,12 +214,46 @@ const AuthenticatedErrorsErrorRoute =
     path: '/errors/$error',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedCheckInLogsRoute =
+  AuthenticatedCheckInLogsRouteImport.update({
+    id: '/check-in/logs',
+    path: '/check-in/logs',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedCheckInConfigurationRoute =
+  AuthenticatedCheckInConfigurationRouteImport.update({
+    id: '/check-in/configuration',
+    path: '/check-in/configuration',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedCheckInCheckpointsRoute =
+  AuthenticatedCheckInCheckpointsRouteImport.update({
+    id: '/check-in/checkpoints',
+    path: '/check-in/checkpoints',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedBillingSettingsRoute =
+  AuthenticatedBillingSettingsRouteImport.update({
+    id: '/billing/settings',
+    path: '/billing/settings',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedBillingReviewRoute =
   AuthenticatedBillingReviewRouteImport.update({
     id: '/billing/review',
     path: '/billing/review',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAuthUsersRoute = AuthenticatedAuthUsersRouteImport.update({
+  id: '/auth/users',
+  path: '/auth/users',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAuthRolesRoute = AuthenticatedAuthRolesRouteImport.update({
+  id: '/auth/roles',
+  path: '/auth/roles',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
@@ -212,9 +266,17 @@ export interface FileRoutesByFullPath {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/homestay/$homestayId': typeof HomestayHomestayIdRoute
+  '/auth/roles': typeof AuthenticatedAuthRolesRoute
+  '/auth/users': typeof AuthenticatedAuthUsersRoute
   '/billing/review': typeof AuthenticatedBillingReviewRoute
+  '/billing/settings': typeof AuthenticatedBillingSettingsRoute
+  '/check-in/checkpoints': typeof AuthenticatedCheckInCheckpointsRoute
+  '/check-in/configuration': typeof AuthenticatedCheckInConfigurationRoute
+  '/check-in/logs': typeof AuthenticatedCheckInLogsRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/homestay-list/$homestayId': typeof AuthenticatedHomestayListHomestayIdRoute
+  '/homestay/listing': typeof AuthenticatedHomestayListingRoute
+  '/homestay/record': typeof AuthenticatedHomestayRecordRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/billing': typeof AuthenticatedSettingsBillingRoute
   '/settings/change-password': typeof AuthenticatedSettingsChangePasswordRoute
@@ -241,9 +303,17 @@ export interface FileRoutesByTo {
   '/503': typeof errors503Route
   '/homestay/$homestayId': typeof HomestayHomestayIdRoute
   '/': typeof AuthenticatedIndexRoute
+  '/auth/roles': typeof AuthenticatedAuthRolesRoute
+  '/auth/users': typeof AuthenticatedAuthUsersRoute
   '/billing/review': typeof AuthenticatedBillingReviewRoute
+  '/billing/settings': typeof AuthenticatedBillingSettingsRoute
+  '/check-in/checkpoints': typeof AuthenticatedCheckInCheckpointsRoute
+  '/check-in/configuration': typeof AuthenticatedCheckInConfigurationRoute
+  '/check-in/logs': typeof AuthenticatedCheckInLogsRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/homestay-list/$homestayId': typeof AuthenticatedHomestayListHomestayIdRoute
+  '/homestay/listing': typeof AuthenticatedHomestayListingRoute
+  '/homestay/record': typeof AuthenticatedHomestayRecordRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/billing': typeof AuthenticatedSettingsBillingRoute
   '/settings/change-password': typeof AuthenticatedSettingsChangePasswordRoute
@@ -273,9 +343,17 @@ export interface FileRoutesById {
   '/(errors)/503': typeof errors503Route
   '/homestay/$homestayId': typeof HomestayHomestayIdRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/auth/roles': typeof AuthenticatedAuthRolesRoute
+  '/_authenticated/auth/users': typeof AuthenticatedAuthUsersRoute
   '/_authenticated/billing/review': typeof AuthenticatedBillingReviewRoute
+  '/_authenticated/billing/settings': typeof AuthenticatedBillingSettingsRoute
+  '/_authenticated/check-in/checkpoints': typeof AuthenticatedCheckInCheckpointsRoute
+  '/_authenticated/check-in/configuration': typeof AuthenticatedCheckInConfigurationRoute
+  '/_authenticated/check-in/logs': typeof AuthenticatedCheckInLogsRoute
   '/_authenticated/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/_authenticated/homestay-list/$homestayId': typeof AuthenticatedHomestayListHomestayIdRoute
+  '/_authenticated/homestay/listing': typeof AuthenticatedHomestayListingRoute
+  '/_authenticated/homestay/record': typeof AuthenticatedHomestayRecordRoute
   '/_authenticated/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/_authenticated/settings/billing': typeof AuthenticatedSettingsBillingRoute
   '/_authenticated/settings/change-password': typeof AuthenticatedSettingsChangePasswordRoute
@@ -305,9 +383,17 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/homestay/$homestayId'
+    | '/auth/roles'
+    | '/auth/users'
     | '/billing/review'
+    | '/billing/settings'
+    | '/check-in/checkpoints'
+    | '/check-in/configuration'
+    | '/check-in/logs'
     | '/errors/$error'
     | '/homestay-list/$homestayId'
+    | '/homestay/listing'
+    | '/homestay/record'
     | '/settings/appearance'
     | '/settings/billing'
     | '/settings/change-password'
@@ -334,9 +420,17 @@ export interface FileRouteTypes {
     | '/503'
     | '/homestay/$homestayId'
     | '/'
+    | '/auth/roles'
+    | '/auth/users'
     | '/billing/review'
+    | '/billing/settings'
+    | '/check-in/checkpoints'
+    | '/check-in/configuration'
+    | '/check-in/logs'
     | '/errors/$error'
     | '/homestay-list/$homestayId'
+    | '/homestay/listing'
+    | '/homestay/record'
     | '/settings/appearance'
     | '/settings/billing'
     | '/settings/change-password'
@@ -365,9 +459,17 @@ export interface FileRouteTypes {
     | '/(errors)/503'
     | '/homestay/$homestayId'
     | '/_authenticated/'
+    | '/_authenticated/auth/roles'
+    | '/_authenticated/auth/users'
     | '/_authenticated/billing/review'
+    | '/_authenticated/billing/settings'
+    | '/_authenticated/check-in/checkpoints'
+    | '/_authenticated/check-in/configuration'
+    | '/_authenticated/check-in/logs'
     | '/_authenticated/errors/$error'
     | '/_authenticated/homestay-list/$homestayId'
+    | '/_authenticated/homestay/listing'
+    | '/_authenticated/homestay/record'
     | '/_authenticated/settings/appearance'
     | '/_authenticated/settings/billing'
     | '/_authenticated/settings/change-password'
@@ -581,6 +683,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsAppearanceRouteImport
       parentRoute: typeof AuthenticatedSettingsRouteRoute
     }
+    '/_authenticated/homestay/record': {
+      id: '/_authenticated/homestay/record'
+      path: '/homestay/record'
+      fullPath: '/homestay/record'
+      preLoaderRoute: typeof AuthenticatedHomestayRecordRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/homestay/listing': {
+      id: '/_authenticated/homestay/listing'
+      path: '/homestay/listing'
+      fullPath: '/homestay/listing'
+      preLoaderRoute: typeof AuthenticatedHomestayListingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/homestay-list/$homestayId': {
       id: '/_authenticated/homestay-list/$homestayId'
       path: '/homestay-list/$homestayId'
@@ -595,11 +711,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErrorsErrorRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/check-in/logs': {
+      id: '/_authenticated/check-in/logs'
+      path: '/check-in/logs'
+      fullPath: '/check-in/logs'
+      preLoaderRoute: typeof AuthenticatedCheckInLogsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/check-in/configuration': {
+      id: '/_authenticated/check-in/configuration'
+      path: '/check-in/configuration'
+      fullPath: '/check-in/configuration'
+      preLoaderRoute: typeof AuthenticatedCheckInConfigurationRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/check-in/checkpoints': {
+      id: '/_authenticated/check-in/checkpoints'
+      path: '/check-in/checkpoints'
+      fullPath: '/check-in/checkpoints'
+      preLoaderRoute: typeof AuthenticatedCheckInCheckpointsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/billing/settings': {
+      id: '/_authenticated/billing/settings'
+      path: '/billing/settings'
+      fullPath: '/billing/settings'
+      preLoaderRoute: typeof AuthenticatedBillingSettingsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/billing/review': {
       id: '/_authenticated/billing/review'
       path: '/billing/review'
       fullPath: '/billing/review'
       preLoaderRoute: typeof AuthenticatedBillingReviewRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/auth/users': {
+      id: '/_authenticated/auth/users'
+      path: '/auth/users'
+      fullPath: '/auth/users'
+      preLoaderRoute: typeof AuthenticatedAuthUsersRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/auth/roles': {
+      id: '/_authenticated/auth/roles'
+      path: '/auth/roles'
+      fullPath: '/auth/roles'
+      preLoaderRoute: typeof AuthenticatedAuthRolesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
   }
@@ -631,9 +789,17 @@ const AuthenticatedSettingsRouteRouteWithChildren =
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRouteRoute: typeof AuthenticatedSettingsRouteRouteWithChildren
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedAuthRolesRoute: typeof AuthenticatedAuthRolesRoute
+  AuthenticatedAuthUsersRoute: typeof AuthenticatedAuthUsersRoute
   AuthenticatedBillingReviewRoute: typeof AuthenticatedBillingReviewRoute
+  AuthenticatedBillingSettingsRoute: typeof AuthenticatedBillingSettingsRoute
+  AuthenticatedCheckInCheckpointsRoute: typeof AuthenticatedCheckInCheckpointsRoute
+  AuthenticatedCheckInConfigurationRoute: typeof AuthenticatedCheckInConfigurationRoute
+  AuthenticatedCheckInLogsRoute: typeof AuthenticatedCheckInLogsRoute
   AuthenticatedErrorsErrorRoute: typeof AuthenticatedErrorsErrorRoute
   AuthenticatedHomestayListHomestayIdRoute: typeof AuthenticatedHomestayListHomestayIdRoute
+  AuthenticatedHomestayListingRoute: typeof AuthenticatedHomestayListingRoute
+  AuthenticatedHomestayRecordRoute: typeof AuthenticatedHomestayRecordRoute
   AuthenticatedBillingIndexRoute: typeof AuthenticatedBillingIndexRoute
   AuthenticatedCheckInLogsIndexRoute: typeof AuthenticatedCheckInLogsIndexRoute
   AuthenticatedCheckInIndexRoute: typeof AuthenticatedCheckInIndexRoute
@@ -649,10 +815,19 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRouteRoute: AuthenticatedSettingsRouteRouteWithChildren,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedAuthRolesRoute: AuthenticatedAuthRolesRoute,
+  AuthenticatedAuthUsersRoute: AuthenticatedAuthUsersRoute,
   AuthenticatedBillingReviewRoute: AuthenticatedBillingReviewRoute,
+  AuthenticatedBillingSettingsRoute: AuthenticatedBillingSettingsRoute,
+  AuthenticatedCheckInCheckpointsRoute: AuthenticatedCheckInCheckpointsRoute,
+  AuthenticatedCheckInConfigurationRoute:
+    AuthenticatedCheckInConfigurationRoute,
+  AuthenticatedCheckInLogsRoute: AuthenticatedCheckInLogsRoute,
   AuthenticatedErrorsErrorRoute: AuthenticatedErrorsErrorRoute,
   AuthenticatedHomestayListHomestayIdRoute:
     AuthenticatedHomestayListHomestayIdRoute,
+  AuthenticatedHomestayListingRoute: AuthenticatedHomestayListingRoute,
+  AuthenticatedHomestayRecordRoute: AuthenticatedHomestayRecordRoute,
   AuthenticatedBillingIndexRoute: AuthenticatedBillingIndexRoute,
   AuthenticatedCheckInLogsIndexRoute: AuthenticatedCheckInLogsIndexRoute,
   AuthenticatedCheckInIndexRoute: AuthenticatedCheckInIndexRoute,

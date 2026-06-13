@@ -1,6 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { HomestayGuardRecord } from "@/features/homestay-booking/components/homestay-guard-record";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/homestay-record/")({
-  component: HomestayGuardRecord,
+  beforeLoad: () => {
+    throw redirect({ to: "/homestay/record" });
+  },
 });

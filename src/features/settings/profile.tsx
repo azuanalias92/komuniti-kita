@@ -1,135 +1,132 @@
-import { z } from 'zod'
-import { useEffect } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from "zod";
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 //
-import { Button } from '@/components/ui/button'
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent } from '@/components/ui/card'
-import { useAuthStore } from '@/stores/auth-store'
-import { toast } from 'sonner'
+import { Button } from "@/components/ui/button";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { useAuthStore } from "@/stores/auth-store";
+import { toast } from "sonner";
 
 const profileFormSchema = z.object({
-  firstName: z.string().min(1, 'First name is required'),
-  lastName: z.string().min(1, 'Last name is required'),
-  username: z.string().min(2, 'Username must be at least 2 characters'),
-  phoneNumber: z.string().min(7, 'Phone number is required'),
-  email: z.string().email('Email is required'),
-})
+  fullName: z.string().min(1, "Full name is required"),
+  username: z.string().min(2, "Username must be at least 2 characters"),
+  phoneNumber: z.string().min(7, "Phone number is required"),
+  email: z.string().email("Email is required"),
+});
 
-type ProfileFormValues = z.infer<typeof profileFormSchema>
+type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 const defaultValues: ProfileFormValues = {
-  email: '',
-  username: '',
-  firstName: '',
-  lastName: '',
-  phoneNumber: '',
-}
+  email: "",
+  username: "",
+  fullName: "",
+  phoneNumber: "",
+};
 
 function getFallbackValues(email: string): ProfileFormValues {
   return {
     email,
-    username: email.split('@')[0] || '',
-    firstName: '',
-    lastName: '',
-    phoneNumber: '',
+    username: email.split("@")[0] || "",
+    fullName: "",
+    phoneNumber: "",
+  };
+}
+
+function buildFullName(firstName: string, lastName: string) {
+  return [firstName, lastName].map((value) => value.trim()).filter(Boolean).join(" ");
+}
+
+function splitFullName(fullName: string) {
+  const trimmed = fullName.trim();
+  if (!trimmed) {
+    return { firstName: "", lastName: "" };
   }
+
+  const parts = trimmed.split(/\s+/);
+  return {
+    firstName: parts[0] || "",
+    lastName: parts.slice(1).join(" "),
+  };
 }
 
 export function SettingsProfile() {
-  const { auth } = useAuthStore()
+  const { auth } = useAuthStore();
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues,
-    mode: 'onChange',
-  })
+    mode: "onChange",
+  });
 
   useEffect(() => {
     const load = async () => {
-      const email = auth.user?.email
+      const email = auth.user?.email;
       if (!email) {
-        form.reset(defaultValues)
-        return
+        form.reset(defaultValues);
+        return;
       }
 
       try {
-        const res = await fetch(`/api/profile?email=${encodeURIComponent(email)}`)
+        const res = await fetch(`/api/profile?email=${encodeURIComponent(email)}`);
         if (res.status === 204 || !res.ok) {
-          form.reset(getFallbackValues(email))
-          return
+          form.reset(getFallbackValues(email));
+          return;
         }
 
-        const row = await res.json().catch(() => null)
+        const row = await res.json().catch(() => null);
         form.reset({
           email: row?.email || email,
-          username: row?.username || email.split('@')[0] || '',
-          firstName: row?.first_name || '',
-          lastName: row?.last_name || '',
-          phoneNumber: row?.phone_number || '',
-        })
+          username: row?.username || email.split("@")[0] || "",
+          fullName: buildFullName(String(row?.first_name || ""), String(row?.last_name || "")),
+          phoneNumber: row?.phone_number || "",
+        });
       } catch {
-        form.reset(getFallbackValues(email))
+        form.reset(getFallbackValues(email));
       }
-    }
-    load()
+    };
+    load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auth.user?.email])
+  }, [auth.user?.email]);
 
   return (
     <Card>
-      <CardContent className="pt-6">
+      <CardContent>
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(async (data) => {
+              const { firstName, lastName } = splitFullName(data.fullName);
               try {
-                const res = await fetch('/api/profile', {
-                  method: 'PATCH',
-                  headers: { 'content-type': 'application/json' },
-                  body: JSON.stringify(data),
-                })
+                const res = await fetch("/api/profile", {
+                  method: "PATCH",
+                  headers: { "content-type": "application/json" },
+                  body: JSON.stringify({
+                    ...data,
+                    firstName,
+                    lastName,
+                  }),
+                });
                 if (!res.ok) {
-                  const err = await res.json().catch(() => ({ error: 'update_failed' }))
-                  toast.error(String(err.error || 'Failed to update profile'))
-                  return
+                  const err = await res.json().catch(() => ({ error: "update_failed" }));
+                  toast.error(String(err.error || "Failed to update profile"));
+                  return;
                 }
-                toast.success('Profile updated')
+                toast.success("Profile updated");
               } catch {
-                toast.error('Failed to update profile')
+                toast.error("Failed to update profile");
               }
             })}
             className="space-y-8"
           >
             <FormField
               control={form.control}
-              name="firstName"
+              name="fullName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>First Name</FormLabel>
+                  <FormLabel>Full Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="John" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="lastName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Last Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Doe" {...field} />
+                    <Input placeholder="John Doe" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -170,9 +167,7 @@ export function SettingsProfile() {
                   <FormControl>
                     <Input readOnly {...field} />
                   </FormControl>
-                  <FormDescription>
-                    Email is set from your login and cannot be changed here.
-                  </FormDescription>
+                  <FormDescription>Email is set from your login and cannot be changed here.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -182,5 +177,5 @@ export function SettingsProfile() {
         </Form>
       </CardContent>
     </Card>
-  )
+  );
 }

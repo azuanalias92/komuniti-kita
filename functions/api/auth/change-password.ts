@@ -22,6 +22,10 @@ async function ensureSchema(env: { DB: any }) {
   ).run()
 }
 
+function hasSuperAdminRole(role: string) {
+  return role === 'super_admin' || role === 'superadmin'
+}
+
 export async function onRequestPost({
   request,
   env,
@@ -50,6 +54,7 @@ export async function onRequestPost({
   const body = await request.json().catch(() => ({} as Record<string, unknown>))
   const currentPassword = typeof body.currentPassword === 'string' ? body.currentPassword : ''
   const newPassword = typeof body.newPassword === 'string' ? body.newPassword.trim() : ''
+  const normalizedEmail = user.email.trim().toLowerCase()
 
   if (newPassword.length < 8) {
     return new Response(JSON.stringify({ error: 'password_too_short' }), {
@@ -58,12 +63,55 @@ export async function onRequestPost({
     })
   }
 
-  const userRow = await env.DB.prepare(
-    `SELECT id, password_hash
-     FROM users
-     WHERE lower(email) = lower(?)
-     LIMIT 1`
-  ).bind(user.email).first() as Record<string, unknown> | null
+  let userRow = null as Record<string, unknown> | null
+
+  if (user.id) {
+    userRow = await env.DB.prepare(
+      `SELECT id, password_hash
+       FROM users
+       WHERE id = ?
+       LIMIT 1`
+    ).bind(user.id).first() as Record<string, unknown> | null
+  }
+
+  if (!userRow && normalizedEmail) {
+    userRow = await env.DB.prepare(
+      `SELECT id, password_hash
+       FROM users
+       WHERE lower(email) = lower(?)
+       LIMIT 1`
+    ).bind(normalizedEmail).first() as Record<string, unknown> | null
+  }
+
+  if (!userRow && user.role.some(hasSuperAdminRole) && normalizedEmail) {
+    const now = new Date().toISOString()
+    const id = user.id || 'super-admin'
+    const username = normalizedEmail.split('@')[0] || 'super-admin'
+
+    await env.DB.prepare(
+      `INSERT INTO users (
+        id,
+        tenant_id,
+        username,
+        email,
+        status,
+        role,
+        created_at,
+        updated_at
+      ) VALUES (?, 'default', ?, ?, 'active', 'super_admin', ?, ?)
+      ON CONFLICT(tenant_id, email) DO UPDATE SET
+        role = 'super_admin',
+        status = 'active',
+        updated_at = excluded.updated_at`
+    ).bind(id, username, normalizedEmail, now, now).run()
+
+    userRow = await env.DB.prepare(
+      `SELECT id, password_hash
+       FROM users
+       WHERE id = ?
+       LIMIT 1`
+    ).bind(id).first() as Record<string, unknown> | null
+  }
 
   if (!userRow) {
     return new Response(JSON.stringify({ error: 'user_not_found' }), {

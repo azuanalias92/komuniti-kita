@@ -1,10 +1,10 @@
 import z from 'zod'
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
+import { Users } from '@/features/users'
 
 const usersSearchSchema = z.object({
   page: z.coerce.number().optional().catch(1),
   pageSize: z.coerce.number().optional().catch(10),
-  // Facet filters
   status: z
     .array(
       z.union([
@@ -17,13 +17,10 @@ const usersSearchSchema = z.object({
     .optional()
     .catch([]),
   role: z.array(z.string()).optional().catch([]),
-  // Per-column text filter (example for username)
   username: z.string().optional().catch(''),
 })
 
-export const Route = createFileRoute('/_authenticated/users/')({
+export const Route = createFileRoute('/_authenticated/auth/users')({
   validateSearch: usersSearchSchema,
-  beforeLoad: () => {
-    throw redirect({ to: '/auth/users' })
-  },
+  component: Users,
 })

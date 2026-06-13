@@ -62,21 +62,21 @@ export const sidebarData: SidebarData = {
             },
             {
               title: "View Logs",
-              url: "/check-in-logs",
+              url: "/check-in/logs",
               icon: Logs,
               requiredPermission: { resource: "/check-in-logs", action: "read" },
             },
             {
               title: "Checkpoints",
-              url: "/checkpoints",
+              url: "/check-in/checkpoints",
               icon: FlagTriangleRight,
               requiredPermission: { resource: "/checkpoints", action: "read" },
             },
             {
               title: "Configuration",
-              url: "/settings/check-in",
+              url: "/check-in/configuration",
               icon: Bolt,
-              requiredPermission: { resource: "/settings/check-in", action: "read" },
+              requiredPermission: { resource: "/check-in", action: "read" },
             },
           ],
         },
@@ -99,7 +99,7 @@ export const sidebarData: SidebarData = {
             },
             {
               title: "Settings",
-              url: "/settings/billing",
+              url: "/billing/settings",
               icon: Bolt,
               requiredPermission: { resource: "/settings", action: "read" },
             },
@@ -112,13 +112,13 @@ export const sidebarData: SidebarData = {
           items: [
             {
               title: "Listing",
-              url: "/homestay",
+              url: "/homestay/listing",
               icon: List,
               requiredPermission: { resource: "/homestay", action: "read" },
             },
             {
               title: "Record",
-              url: "/homestay-record",
+              url: "/homestay/record",
               icon: SquarePen,
               requiredPermission: { resource: "/homestay-record", action: "read" },
             },
@@ -131,13 +131,13 @@ export const sidebarData: SidebarData = {
           items: [
             {
               title: "Users",
-              url: "/users",
+              url: "/auth/users",
               icon: Users,
               requiredPermission: { resource: "/users", action: "read" },
             },
             {
               title: "Roles",
-              url: "/roles",
+              url: "/auth/roles",
               icon: CheckCircle,
               requiredPermission: { resource: "/roles", action: "read" },
             },

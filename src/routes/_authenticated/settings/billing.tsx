@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -12,10 +12,12 @@ import { useAuthStore } from "@/stores/auth-store";
 type Settings = { rate: number; frequency: string; qrKey: string | null; bgKey?: string | null; startDate?: string };
 
 export const Route = createFileRoute("/_authenticated/settings/billing")({
-  component: BillingSettings,
+  beforeLoad: () => {
+    throw redirect({ to: "/billing/settings" });
+  },
 });
 
-function BillingSettings() {
+export function BillingSettings() {
   const qc = useQueryClient();
   const token = useAuthStore((s) => s.auth.accessToken);
   const { data } = useQuery<Settings | null>({

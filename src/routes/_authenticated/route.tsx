@@ -21,7 +21,22 @@ export const Route = createFileRoute('/_authenticated')({
     const href = location.href || ''
     const path = href.split('?')[0].split('#')[0]
     const seg = path.split('/').filter(Boolean)[0] || ''
-    const resource = seg ? `/${seg}` : '/'
+    const resource =
+      path === '/check-in/logs' || path.startsWith('/check-in/logs/')
+        ? '/check-in-logs'
+        : path === '/check-in/checkpoints' || path.startsWith('/check-in/checkpoints/')
+          ? '/checkpoints'
+          : path === '/billing/settings' || path.startsWith('/billing/settings/')
+            ? '/settings'
+            : path === '/homestay/record' || path.startsWith('/homestay/record/')
+              ? '/homestay-record'
+              : path === '/auth/users' || path.startsWith('/auth/users/')
+                ? '/users'
+                : path === '/auth/roles' || path.startsWith('/auth/roles/')
+                  ? '/roles'
+        : seg
+          ? `/${seg}`
+          : '/'
     
     // Always allow access to error pages
     if (path.startsWith('/errors')) {

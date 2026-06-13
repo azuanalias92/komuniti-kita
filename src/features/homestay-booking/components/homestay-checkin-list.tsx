@@ -309,7 +309,7 @@ export function HomestayCheckinList() {
           actions={
             <>
               <Button asChild variant="outline" size="sm">
-                <Link to="/homestay">
+                <Link to="/homestay/listing">
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back
                 </Link>

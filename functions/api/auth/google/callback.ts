@@ -46,7 +46,7 @@ async function generateToken(
   return `${data}.${sigB64}`
 }
 
-export async function onRequestGet({ request, env }: { request: Request; env: { DB: D1Database; GOOGLE_CLIENT_ID?: string; GOOGLE_CLIENT_SECRET?: string; JWT_SECRET?: string; SUPER_ADMIN_EMAIL?: string } }) {
+export async function onRequestGet({ request, env }: { request: Request; env: { DB: any; GOOGLE_CLIENT_ID?: string; GOOGLE_CLIENT_SECRET?: string; JWT_SECRET?: string; SUPER_ADMIN_EMAIL?: string } }) {
   try {
     return await handleCallback({ request, env })
   } catch (e) {
@@ -57,7 +57,7 @@ export async function onRequestGet({ request, env }: { request: Request; env: { 
   }
 }
 
-async function handleCallback({ request, env }: { request: Request; env: { DB: D1Database; GOOGLE_CLIENT_ID?: string; GOOGLE_CLIENT_SECRET?: string; JWT_SECRET?: string; SUPER_ADMIN_EMAIL?: string } }) {
+async function handleCallback({ request, env }: { request: Request; env: { DB: any; GOOGLE_CLIENT_ID?: string; GOOGLE_CLIENT_SECRET?: string; JWT_SECRET?: string; SUPER_ADMIN_EMAIL?: string } }) {
   const url = new URL(request.url)
   const origin = url.origin
   const code = url.searchParams.get('code') || ''
@@ -111,12 +111,53 @@ async function handleCallback({ request, env }: { request: Request; env: { DB: D
 
   const jwtSecret = env.JWT_SECRET || 'dev-jwt-secret-change-in-production'
 
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL DEFAULT 'default',
+      username TEXT,
+      email TEXT,
+      first_name TEXT,
+      last_name TEXT,
+      phone_number TEXT,
+      status TEXT,
+      role TEXT,
+      password_hash TEXT,
+      password_updated_at TEXT,
+      created_at TEXT,
+      updated_at TEXT,
+      UNIQUE(tenant_id, email)
+    )`
+  ).run()
+
   // — Super admin bypass —
   // If this email matches SUPER_ADMIN_EMAIL, skip invite/approval flow entirely
   // and grant access to all tenants.
   const isSuperAdmin = env.SUPER_ADMIN_EMAIL && userEmail === env.SUPER_ADMIN_EMAIL
 
   if (isSuperAdmin) {
+    const now = new Date().toISOString()
+    const normalizedEmail = userEmail.trim().toLowerCase()
+    const username = normalizedEmail.split('@')[0] || 'super-admin'
+
+    await env.DB.prepare(
+      `INSERT INTO users (
+        id,
+        tenant_id,
+        username,
+        email,
+        status,
+        role,
+        created_at,
+        updated_at
+      ) VALUES ('super-admin', 'default', ?, ?, 'active', 'super_admin', ?, ?)
+      ON CONFLICT(tenant_id, email) DO UPDATE SET
+        id = 'super-admin',
+        role = 'super_admin',
+        status = 'active',
+        updated_at = excluded.updated_at`
+    ).bind(username, normalizedEmail, now, now).run()
+
     const { results: allTenants } = await env.DB.prepare(
       `SELECT id, name, slug FROM tenants ORDER BY name`
     ).all() as { results: { id: string; name: string; slug: string }[] | null }
@@ -147,26 +188,6 @@ async function handleCallback({ request, env }: { request: Request; env: { DB: D
     headers.append('Set-Cookie', 'oauth_verifier=; Path=/; Max-Age=0')
     return new Response(null, { status: 302, headers })
   }
-
-  // Ensure users table exists
-  await env.DB.prepare(
-    `CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY,
-      tenant_id TEXT NOT NULL DEFAULT 'default',
-      username TEXT,
-      email TEXT,
-      first_name TEXT,
-      last_name TEXT,
-      phone_number TEXT,
-      status TEXT,
-      role TEXT,
-      password_hash TEXT,
-      password_updated_at TEXT,
-      created_at TEXT,
-      updated_at TEXT,
-      UNIQUE(tenant_id, email)
-    )`
-  ).run()
 
   // Look up user by email (across any tenant)
   const userRow = await env.DB.prepare(
