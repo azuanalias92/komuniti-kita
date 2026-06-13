@@ -1,5 +1,19 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import {
+  flexRender,
+  getCoreRowModel,
+  getFacetedRowModel,
+  getFacetedUniqueValues,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  type ColumnDef,
+  type PaginationState,
+  type SortingState,
+  type VisibilityState,
+  useReactTable,
+} from '@tanstack/react-table'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { PageIntro } from '@/components/layout/page-intro'
@@ -13,6 +27,8 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
+import { DataTableColumnHeader, DataTablePagination, DataTableToolbar } from '@/components/data-table'
+import { cn } from '@/lib/utils'
 
 type SummaryRow = {
   houseId: string
@@ -24,10 +40,38 @@ type SummaryRow = {
   status: string
 }
 
+type PaymentRow = {
+  id: string
+  houseId: string
+  houseNo: string
+  amount: number
+  receiptKey: string
+  paymentDate: string
+  status: string
+}
+
+function formatMoney(value: number) {
+  return Number(value || 0).toFixed(2)
+}
+
 export function Billing() {
   const [frequency, setFrequency] = useState<string>('monthly')
   const [year, setYear] = useState<string>(String(new Date().getFullYear()))
   const [month, setMonth] = useState<string>(String(new Date().getMonth() + 1))
+  const [summarySorting, setSummarySorting] = useState<SortingState>([])
+  const [summaryColumnVisibility, setSummaryColumnVisibility] = useState<VisibilityState>({})
+  const [summaryGlobalFilter, setSummaryGlobalFilter] = useState('')
+  const [summaryPagination, setSummaryPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  })
+  const [paymentsSorting, setPaymentsSorting] = useState<SortingState>([])
+  const [paymentsColumnVisibility, setPaymentsColumnVisibility] = useState<VisibilityState>({})
+  const [paymentsGlobalFilter, setPaymentsGlobalFilter] = useState('')
+  const [paymentsPagination, setPaymentsPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  })
 
   const { data } = useQuery<{ frequency: string; rate: number; period: { start: string; end: string } | null; data: SummaryRow[] }>({
     queryKey: ['billing:summary', frequency, year, month],
@@ -73,6 +117,205 @@ export function Billing() {
       return await res.json()
     },
   })
+
+  const paymentRows = useMemo<PaymentRow[]>(
+    () =>
+      (payments || []).map((payment) => ({
+        id: payment.id,
+        houseId: payment.house_id,
+        houseNo: residentMap.get(payment.house_id) || payment.house_id,
+        amount: Number(payment.amount || 0),
+        receiptKey: payment.receipt_key,
+        paymentDate: payment.payment_date,
+        status: payment.status,
+      })),
+    [payments, residentMap]
+  )
+
+  const summaryColumns = useMemo<ColumnDef<SummaryRow>[]>(
+    () => [
+      {
+        accessorKey: 'houseNo',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title='House' />
+        ),
+      },
+      {
+        accessorKey: 'amountDue',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title='Due' />
+        ),
+        cell: ({ row }) => formatMoney(row.original.amountDue),
+      },
+      {
+        accessorKey: 'amountPaid',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title='Paid' />
+        ),
+        cell: ({ row }) => formatMoney(row.original.amountPaid),
+      },
+      {
+        accessorKey: 'debit',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title='Debit' />
+        ),
+        cell: ({ row }) => (
+          <span className={row.original.debit ? 'text-red-600' : undefined}>
+            {formatMoney(row.original.debit)}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'credit',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title='Credit' />
+        ),
+        cell: ({ row }) => (
+          <span className={row.original.credit ? 'text-green-600' : undefined}>
+            {formatMoney(row.original.credit)}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'status',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title='Status' />
+        ),
+      },
+    ],
+    []
+  )
+
+  const paymentColumns = useMemo<ColumnDef<PaymentRow>[]>(
+    () => [
+      {
+        accessorKey: 'paymentDate',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title='Date' />
+        ),
+      },
+      {
+        accessorKey: 'houseNo',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title='House' />
+        ),
+      },
+      {
+        accessorKey: 'amount',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title='Amount' />
+        ),
+        cell: ({ row }) => formatMoney(row.original.amount),
+      },
+      {
+        accessorKey: 'status',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title='Status' />
+        ),
+        cell: ({ row }) => (
+          <Badge
+            variant={
+              row.original.status === 'confirmed'
+                ? 'default'
+                : row.original.status === 'rejected'
+                  ? 'destructive'
+                  : 'secondary'
+            }
+          >
+            {row.original.status}
+          </Badge>
+        ),
+      },
+      {
+        accessorKey: 'receiptKey',
+        header: 'Receipt',
+        enableSorting: false,
+        cell: ({ row }) =>
+          row.original.receiptKey ? (
+            <a
+              className='text-primary underline'
+              href={`/api/r2/${row.original.receiptKey}`}
+              target='_blank'
+              rel='noreferrer'
+            >
+              View
+            </a>
+          ) : (
+            '-'
+          ),
+      },
+    ],
+    []
+  )
+
+  const summaryTable = useReactTable({
+    data: rows,
+    columns: summaryColumns,
+    state: {
+      sorting: summarySorting,
+      columnVisibility: summaryColumnVisibility,
+      globalFilter: summaryGlobalFilter,
+      pagination: summaryPagination,
+    },
+    onSortingChange: setSummarySorting,
+    onColumnVisibilityChange: setSummaryColumnVisibility,
+    onGlobalFilterChange: setSummaryGlobalFilter,
+    onPaginationChange: setSummaryPagination,
+    globalFilterFn: (row, _columnId, filterValue) => {
+      const searchValue = String(filterValue).trim().toLowerCase()
+      if (!searchValue) return true
+
+      return (
+        row.original.houseNo.toLowerCase().includes(searchValue) ||
+        row.original.status.toLowerCase().includes(searchValue)
+      )
+    },
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFacetedRowModel: getFacetedRowModel(),
+    getFacetedUniqueValues: getFacetedUniqueValues(),
+  })
+
+  const paymentsTable = useReactTable({
+    data: paymentRows,
+    columns: paymentColumns,
+    state: {
+      sorting: paymentsSorting,
+      columnVisibility: paymentsColumnVisibility,
+      globalFilter: paymentsGlobalFilter,
+      pagination: paymentsPagination,
+    },
+    onSortingChange: setPaymentsSorting,
+    onColumnVisibilityChange: setPaymentsColumnVisibility,
+    onGlobalFilterChange: setPaymentsGlobalFilter,
+    onPaginationChange: setPaymentsPagination,
+    globalFilterFn: (row, _columnId, filterValue) => {
+      const searchValue = String(filterValue).trim().toLowerCase()
+      if (!searchValue) return true
+
+      return (
+        row.original.houseNo.toLowerCase().includes(searchValue) ||
+        row.original.status.toLowerCase().includes(searchValue) ||
+        row.original.paymentDate.toLowerCase().includes(searchValue)
+      )
+    },
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFacetedRowModel: getFacetedRowModel(),
+    getFacetedUniqueValues: getFacetedUniqueValues(),
+  })
+
+  useEffect(() => {
+    setSummaryPagination((current) => ({ ...current, pageIndex: 0 }))
+  }, [summaryGlobalFilter, frequency, year, month])
+
+  useEffect(() => {
+    setPaymentsPagination((current) => ({ ...current, pageIndex: 0 }))
+  }, [paymentsGlobalFilter, data?.period?.start, data?.period?.end])
 
   return (
     <>
@@ -135,75 +378,109 @@ export function Billing() {
           <CardHeader>
             <CardTitle>House Payments</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>House</TableHead>
-                  <TableHead>Due</TableHead>
-                  <TableHead>Paid</TableHead>
-                  <TableHead>Debit</TableHead>
-                  <TableHead>Credit</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((r) => (
-                  <TableRow key={r.houseId}>
-                    <TableCell>{r.houseNo}</TableCell>
-                    <TableCell>{r.amountDue.toFixed(2)}</TableCell>
-                    <TableCell>{r.amountPaid.toFixed(2)}</TableCell>
-                    <TableCell className={r.debit ? 'text-red-600' : ''}>{r.debit.toFixed(2)}</TableCell>
-                    <TableCell className={r.credit ? 'text-green-600' : ''}>{r.credit.toFixed(2)}</TableCell>
-                    <TableCell>{r.status}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+          <CardContent className='flex flex-col gap-4'>
+            <DataTableToolbar
+              table={summaryTable}
+              searchPlaceholder='Filter by house or status...'
+            />
+            <div className="overflow-x-auto rounded-md border">
+              <Table>
+                <TableHeader>
+                  {summaryTable.getHeaderGroups().map((headerGroup) => (
+                    <TableRow key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <TableHead key={header.id} colSpan={header.colSpan}>
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableHeader>
+                <TableBody>
+                  {summaryTable.getRowModel().rows.length ? (
+                    summaryTable.getRowModel().rows.map((row) => (
+                      <TableRow key={row.id}>
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell key={cell.id}>
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={summaryColumns.length}
+                        className='h-24 text-center text-muted-foreground'
+                      >
+                        No house payments found.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </div>
+            <DataTablePagination table={summaryTable} className='mt-auto' />
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className={cn('max-sm:has-[div[role="toolbar"]]:mb-16')}>
           <CardHeader>
             <CardTitle>Payments Details</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>House</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Receipt</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(payments || []).map(p => (
-                  <TableRow key={p.id}>
-                    <TableCell>{p.payment_date}</TableCell>
-                    <TableCell>{residentMap.get(p.house_id) || p.house_id}</TableCell>
-                    <TableCell>{Number(p.amount).toFixed(2)}</TableCell>
-                    <TableCell>
-                      <Badge variant={p.status === 'confirmed' ? 'default' : p.status === 'rejected' ? 'destructive' : 'secondary'}>
-                        {p.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {p.receipt_key ? (
-                        <a className="text-primary underline" href={`/api/r2/${p.receipt_key}`} target="_blank" rel="noreferrer">View</a>
-                      ) : (
-                        '-'
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+          <CardContent className='flex flex-col gap-4'>
+            <DataTableToolbar
+              table={paymentsTable}
+              searchPlaceholder='Filter by date, house, or status...'
+            />
+            <div className="overflow-x-auto rounded-md border">
+              <Table>
+                <TableHeader>
+                  {paymentsTable.getHeaderGroups().map((headerGroup) => (
+                    <TableRow key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <TableHead key={header.id} colSpan={header.colSpan}>
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableHeader>
+                <TableBody>
+                  {paymentsTable.getRowModel().rows.length ? (
+                    paymentsTable.getRowModel().rows.map((row) => (
+                      <TableRow key={row.id}>
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell key={cell.id}>
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={paymentColumns.length}
+                        className='h-24 text-center text-muted-foreground'
+                      >
+                        No payment details found.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </div>
+            <DataTablePagination table={paymentsTable} className='mt-auto' />
           </CardContent>
         </Card>
       </Main>

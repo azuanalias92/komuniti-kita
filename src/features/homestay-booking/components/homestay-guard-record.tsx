@@ -1,4 +1,19 @@
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import {
+  flexRender,
+  getCoreRowModel,
+  getFacetedRowModel,
+  getFacetedUniqueValues,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  type ColumnDef,
+  type PaginationState,
+  type SortingState,
+  type VisibilityState,
+  useReactTable,
+} from "@tanstack/react-table";
 import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
 import { Search } from "@/components/search";
@@ -8,8 +23,10 @@ import { ProfileDropdown } from "@/components/profile-dropdown";
 import { PageIntro } from "@/components/layout/page-intro";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DataTableColumnHeader, DataTablePagination, DataTableToolbar } from "@/components/data-table";
 import { format, isToday, parseISO } from "date-fns";
 import { useAuthStore } from "@/stores/auth-store";
+import { cn } from "@/lib/utils";
 
 type HomestayCheckIn = {
   id: string;
@@ -22,6 +39,193 @@ type HomestayCheckIn = {
   additionalNotes?: string;
   submittedAt: string;
 };
+
+type GuardRecordTone = "green" | "blue" | "red";
+
+const toneStyles: Record<
+  GuardRecordTone,
+  {
+    dot: string;
+    plate: string;
+  }
+> = {
+  green: {
+    dot: "bg-green-500",
+    plate: "bg-green-500/10 border-green-500/20",
+  },
+  blue: {
+    dot: "bg-blue-500",
+    plate: "bg-blue-500/10 border-blue-500/20",
+  },
+  red: {
+    dot: "bg-red-500",
+    plate: "bg-red-500/10 border-red-500/20",
+  },
+};
+
+function GuardRecordTable({
+  title,
+  tone,
+  data,
+  emptyText,
+}: {
+  title: string;
+  tone: GuardRecordTone;
+  data: HomestayCheckIn[];
+  emptyText: string;
+}) {
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [globalFilter, setGlobalFilter] = useState("");
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  });
+
+  const columns = useMemo<ColumnDef<HomestayCheckIn>[]>(
+    () => [
+      {
+        accessorKey: "homestayId",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Homestay" />
+        ),
+        cell: ({ row }) => (
+          <span className="font-medium">{row.original.homestayId}</span>
+        ),
+      },
+      {
+        accessorKey: "personInCharge",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Person in Charge" />
+        ),
+      },
+      {
+        accessorKey: "numberOfGuests",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Guests" />
+        ),
+      },
+      {
+        accessorKey: "numberPlates",
+        header: "Vehicle Plates",
+        enableSorting: false,
+        cell: ({ row }) =>
+          row.original.numberPlates?.length ? (
+            <div className="flex flex-wrap gap-2">
+              {row.original.numberPlates.map((plate, idx) => (
+                <span
+                  key={`${row.original.id}-${idx}`}
+                  className={cn(
+                    "inline-block rounded border px-3 py-1 font-mono",
+                    toneStyles[tone].plate
+                  )}
+                >
+                  {plate}
+                </span>
+              ))}
+            </div>
+          ) : (
+            "-"
+          ),
+      },
+    ],
+    [tone]
+  );
+
+  const table = useReactTable({
+    data,
+    columns,
+    state: {
+      sorting,
+      columnVisibility,
+      globalFilter,
+      pagination,
+    },
+    onSortingChange: setSorting,
+    onColumnVisibilityChange: setColumnVisibility,
+    onGlobalFilterChange: setGlobalFilter,
+    onPaginationChange: setPagination,
+    globalFilterFn: (row, _columnId, filterValue) => {
+      const searchValue = String(filterValue).trim().toLowerCase();
+      if (!searchValue) return true;
+
+      return (
+        row.original.homestayId.toLowerCase().includes(searchValue) ||
+        row.original.personInCharge.toLowerCase().includes(searchValue) ||
+        String(row.original.numberOfGuests).includes(searchValue) ||
+        row.original.numberPlates.some((plate) =>
+          plate.toLowerCase().includes(searchValue)
+        )
+      );
+    },
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFacetedRowModel: getFacetedRowModel(),
+    getFacetedUniqueValues: getFacetedUniqueValues(),
+  });
+
+  return (
+    <section className="space-y-3">
+      <h3 className="flex items-center gap-2 text-lg font-semibold">
+        <span className={cn("inline-block h-3 w-3 rounded-full", toneStyles[tone].dot)}></span>
+        {title} ({data.length})
+      </h3>
+      <Card className="max-sm:has-[div[role='toolbar']]:mb-16">
+        <CardContent className="flex flex-col gap-4 p-6">
+          <DataTableToolbar
+            table={table}
+            searchPlaceholder="Filter by homestay, person, guest, or plate..."
+          />
+          <div className="overflow-x-auto rounded-md border">
+            <Table>
+              <TableHeader>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => (
+                      <TableHead key={header.id} colSpan={header.colSpan}>
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows.length ? (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow key={row.id}>
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id}>
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-24 text-center text-muted-foreground"
+                    >
+                      {emptyText}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          <DataTablePagination table={table} className="mt-auto" />
+        </CardContent>
+      </Card>
+    </section>
+  );
+}
 
 export function HomestayGuardRecord() {
   const { data, isLoading, error } = useQuery({
@@ -99,165 +303,31 @@ export function HomestayGuardRecord() {
       </Header>
 
       <Main className="flex flex-1 flex-col gap-4">
-        <PageIntro
-          title="Homestay Record"
-          subtitle={`Arrivals, stays, and departures for ${format(new Date(), "dd MMM yyyy")}.`}
-        />
+        <PageIntro title="Homestay Record" subtitle={`Arrivals, stays, and departures for ${format(new Date(), "dd MMM yyyy")}.`} />
 
         {isLoading && <div className="text-muted-foreground">Loading vehicle activity...</div>}
         {error && <div className="text-destructive">{(error as Error).message}</div>}
 
         {!isLoading && (
           <div className="space-y-6">
-            {/* Arrivals Section */}
-            <div>
-              <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                <span className="inline-block w-3 h-3 bg-green-500 rounded-full"></span>
-                Arriving Today ({arrivals.length})
-              </h3>
-              {arrivals.length === 0 ? (
-                <div className="text-muted-foreground text-sm">No arrivals scheduled for today.</div>
-              ) : (
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="overflow-x-auto rounded-md border">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Homestay</TableHead>
-                            <TableHead>Person in Charge</TableHead>
-                            <TableHead>Guests</TableHead>
-                            <TableHead className="font-bold">Vehicle Plates</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {arrivals.map((checkin) => (
-                            <TableRow key={checkin.id}>
-                              <TableCell className="font-medium">{checkin.homestayId}</TableCell>
-                              <TableCell>{checkin.personInCharge}</TableCell>
-                              <TableCell>{checkin.numberOfGuests}</TableCell>
-                              <TableCell className="font-bold text-lg">
-                                {checkin.numberPlates?.length ? (
-                                  <div className="flex flex-wrap gap-2">
-                                    {checkin.numberPlates.map((plate, idx) => (
-                                      <span key={idx} className="inline-block bg-green-500/10 border border-green-500/20 px-3 py-1 rounded font-mono">
-                                        {plate}
-                                      </span>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  "-"
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-
-            {/* Staying Today Section */}
-            <div>
-              <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                <span className="inline-block w-3 h-3 bg-blue-500 rounded-full"></span>
-                Staying Today ({staying.length})
-              </h3>
-              {staying.length === 0 ? (
-                <div className="text-muted-foreground text-sm">No guests staying today.</div>
-              ) : (
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="overflow-x-auto rounded-md border">
-                      <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Homestay</TableHead>
-                        <TableHead>Person in Charge</TableHead>
-                        <TableHead>Guests</TableHead>
-                        <TableHead className="font-bold">Vehicle Plates</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {staying.map((checkin) => (
-                        <TableRow key={checkin.id}>
-                          <TableCell className="font-medium">{checkin.homestayId}</TableCell>
-                          <TableCell>{checkin.personInCharge}</TableCell>
-                          <TableCell>{checkin.numberOfGuests}</TableCell>
-                          <TableCell className="font-bold text-lg">
-                            {checkin.numberPlates?.length ? (
-                              <div className="flex flex-wrap gap-2">
-                                {checkin.numberPlates.map((plate, idx) => (
-                                  <span key={idx} className="inline-block bg-blue-500/10 border border-blue-500/20 px-3 py-1 rounded font-mono">
-                                    {plate}
-                                  </span>
-                                ))}
-                              </div>
-                            ) : (
-                              "-"
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                      </Table>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-
-            {/* Departures Section */}
-            <div>
-              <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                <span className="inline-block w-3 h-3 bg-red-500 rounded-full"></span>
-                Departing Today ({departures.length})
-              </h3>
-              {departures.length === 0 ? (
-                <div className="text-muted-foreground text-sm">No departures scheduled for today.</div>
-              ) : (
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="overflow-x-auto rounded-md border">
-                      <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Homestay</TableHead>
-                        <TableHead>Person in Charge</TableHead>
-                        <TableHead>Guests</TableHead>
-                        <TableHead className="font-bold">Vehicle Plates</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {departures.map((checkin) => (
-                        <TableRow key={checkin.id}>
-                          <TableCell className="font-medium">{checkin.homestayId}</TableCell>
-                          <TableCell>{checkin.personInCharge}</TableCell>
-                          <TableCell>{checkin.numberOfGuests}</TableCell>
-                          <TableCell className="font-bold text-lg">
-                            {checkin.numberPlates?.length ? (
-                              <div className="flex flex-wrap gap-2">
-                                {checkin.numberPlates.map((plate, idx) => (
-                                  <span key={idx} className="inline-block bg-red-500/10 border border-red-500/20 px-3 py-1 rounded font-mono">
-                                    {plate}
-                                  </span>
-                                ))}
-                              </div>
-                            ) : (
-                              "-"
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                      </Table>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
+            <GuardRecordTable
+              title="Arriving Today"
+              tone="green"
+              data={arrivals}
+              emptyText="No arrivals scheduled for today."
+            />
+            <GuardRecordTable
+              title="Staying Today"
+              tone="blue"
+              data={staying}
+              emptyText="No guests staying today."
+            />
+            <GuardRecordTable
+              title="Departing Today"
+              tone="red"
+              data={departures}
+              emptyText="No departures scheduled for today."
+            />
           </div>
         )}
       </Main>

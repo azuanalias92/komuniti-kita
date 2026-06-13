@@ -86,13 +86,7 @@ export function CheckpointsTable({ data, search, navigate }: DataTableProps) {
           updatedAt: new Date(c?.updatedAt ?? new Date().toISOString()),
         }))
         .filter(
-          (c: Checkpoint) =>
-            c.id &&
-            c.name &&
-            Number.isFinite(c.latitude) &&
-            Number.isFinite(c.longitude) &&
-            isValidDate(c.createdAt) &&
-            isValidDate(c.updatedAt)
+          (c: Checkpoint) => c.id && c.name && Number.isFinite(c.latitude) && Number.isFinite(c.longitude) && isValidDate(c.createdAt) && isValidDate(c.updatedAt),
         ) as Checkpoint[];
       return { data: list, total: Number(json.total ?? list.length), pageSize: Number(json.pageSize ?? pagination.pageSize) };
     },
@@ -132,7 +126,7 @@ export function CheckpointsTable({ data, search, navigate }: DataTableProps) {
 
   return (
     <Card className={cn('max-sm:has-[div[role="toolbar"]]:mb-16', "flex flex-1 flex-col")}>
-      <CardContent className="flex flex-1 flex-col gap-4 p-6">
+      <CardContent className="flex flex-1 flex-col gap-4">
         {isLoading && <div className="text-muted-foreground">Loading checkpoints...</div>}
         {error && <div className="text-destructive">{(error as Error).message}</div>}
         <DataTableToolbar table={table} searchPlaceholder="Filter checkpoints..." searchKey="name" filters={[]} />
@@ -149,7 +143,7 @@ export function CheckpointsTable({ data, search, navigate }: DataTableProps) {
                         className={cn(
                           "bg-background group-hover/row:bg-muted group-data-[state=selected]/row:bg-muted",
                           header.column.columnDef.meta?.className,
-                          header.column.columnDef.meta?.thClassName
+                          header.column.columnDef.meta?.thClassName,
                         )}
                       >
                         {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
@@ -169,7 +163,7 @@ export function CheckpointsTable({ data, search, navigate }: DataTableProps) {
                         className={cn(
                           "bg-background group-hover/row:bg-muted group-data-[state=selected]/row:bg-muted",
                           cell.column.columnDef.meta?.className,
-                          cell.column.columnDef.meta?.tdClassName
+                          cell.column.columnDef.meta?.tdClassName,
                         )}
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}

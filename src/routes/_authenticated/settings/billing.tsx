@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { useAuthStore } from "@/stores/auth-store";
-import { ContentSection } from "@/features/settings/components/content-section";
 
 type Settings = { rate: number; frequency: string; qrKey: string | null; bgKey?: string | null; startDate?: string };
 
@@ -94,48 +93,43 @@ function BillingSettings() {
   }, [data]);
 
   return (
-    <ContentSection title="Billing" desc="Configure rates, schedule, QR code and page background.">
-      <Card>
-        <CardHeader>
-          <CardTitle>Billing Settings</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Rate</Label>
-            <Input type="number" min={0} step={0.01} value={rate} onChange={(e) => setRate(e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label>Start Date</Label>
-            <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label>Payment Frequency</Label>
-            <Select value={frequency} onValueChange={setFrequency}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select frequency" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="monthly">Monthly</SelectItem>
-                <SelectItem value="semi-annual">Every 6 Months</SelectItem>
-                <SelectItem value="annual">Annually</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>QR Code Image</Label>
-            {qrUrl && <img src={qrUrl} alt="QR" className="h-40 w-40 border rounded" />}
-            <Input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} />
-          </div>
-          <div className="space-y-2">
-            <Label>Background Image</Label>
-            {bgUrl && <img src={bgUrl} alt="Background preview" className="h-40 w-40 border rounded" />}
-            <Input type="file" accept="image/*" onChange={(e) => setBgFile(e.target.files?.[0] || null)} />
-          </div>
-          <Button disabled={isPending} onClick={handleSave}>
-            Save
-          </Button>
-        </CardContent>
-      </Card>
-    </ContentSection>
+    <Card>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label>Rate</Label>
+          <Input type="number" min={0} step={0.01} value={rate} onChange={(e) => setRate(e.target.value)} />
+        </div>
+        <div className="space-y-2">
+          <Label>Start Date</Label>
+          <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+        </div>
+        <div className="space-y-2">
+          <Label>Payment Frequency</Label>
+          <Select value={frequency} onValueChange={setFrequency}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select frequency" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="monthly">Monthly</SelectItem>
+              <SelectItem value="semi-annual">Every 6 Months</SelectItem>
+              <SelectItem value="annual">Annually</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>QR Code Image</Label>
+          {qrUrl && <img src={qrUrl} alt="QR" className="h-40 w-40 border rounded" />}
+          <Input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+        </div>
+        <div className="space-y-2">
+          <Label>Background Image</Label>
+          {bgUrl && <img src={bgUrl} alt="Background preview" className="h-40 w-40 border rounded" />}
+          <Input type="file" accept="image/*" onChange={(e) => setBgFile(e.target.files?.[0] || null)} />
+        </div>
+        <Button disabled={isPending} onClick={handleSave}>
+          Save
+        </Button>
+      </CardContent>
+    </Card>
   );
 }

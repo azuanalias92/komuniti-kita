@@ -1,22 +1,33 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import {
+  flexRender,
+  getCoreRowModel,
+  getFacetedRowModel,
+  getFacetedUniqueValues,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  type ColumnDef,
+  type PaginationState,
+  type SortingState,
+  type VisibilityState,
+  useReactTable,
+} from "@tanstack/react-table";
+import { format } from "date-fns";
 import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
 import { PageIntro } from "@/components/layout/page-intro";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { ThemeSwitch } from "@/components/theme-switch";
+import { DataTableColumnHeader, DataTablePagination, DataTableToolbar } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Download, Search as SearchIcon } from "lucide-react";
-import { format } from "date-fns";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { CalendarIcon, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
-import { ConfigDrawer } from "@/components/config-drawer";
-import { Search } from "@/components/search";
 
 interface CheckInLog {
   id: string;
@@ -28,21 +39,25 @@ interface CheckInLog {
   date: Date;
 }
 
-interface GroupedLogs {
-  [checkpointId: string]: {
-    checkpointName: string;
-    logs: CheckInLog[];
-  };
-}
+type CheckInLogRow = CheckInLog & {
+  resolvedCheckpointName: string;
+  resolvedUserName: string;
+};
 
 function isValidDate(date: Date) {
   return !Number.isNaN(date.getTime());
 }
 
 export function CheckInLogs() {
-  const [searchTerm, setSearchTerm] = useState("");
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
+  const [sorting, setSorting] = useState<SortingState>([{ id: "timestamp", desc: true }]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [globalFilter, setGlobalFilter] = useState("");
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  });
 
   // Fetch check-in logs from API
   const { data: checkIns = [], isLoading } = useQuery({
@@ -111,21 +126,23 @@ export function CheckInLogs() {
     return map;
   }, [users]);
 
-  // Filter and group logs
-  const groupedLogs = useMemo(() => {
-    let filtered = checkIns;
+  const tableData = useMemo<CheckInLogRow[]>(() => {
+    const checkpointNameById = new Map<string, string>();
+    (checkpoints as any[]).forEach((checkpoint) => {
+      const id = String(checkpoint.id ?? "");
+      const name = String(checkpoint.name ?? "").trim();
+      if (id) checkpointNameById.set(id, name || id);
+    });
 
-    // Filter by search term
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (log) =>
-          (log.userName || userNameById.get(String(log.userId)) || "-").toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (log.checkpointName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-          format(log.date, "dd/MM/yyyy p").toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
+    let filtered = checkIns.map((log) => {
+      const checkpointId = String(log.checkpointId || "");
+      return {
+        ...log,
+        resolvedCheckpointName: checkpointNameById.get(checkpointId) || log.checkpointName || checkpointId || "-",
+        resolvedUserName: userNameById.get(String(log.userId)) || log.userName || log.userId || "-",
+      };
+    });
 
-    // Filter by date range
     if (dateFrom) {
       filtered = filtered.filter((log) => log.date >= dateFrom);
     }
@@ -135,41 +152,81 @@ export function CheckInLogs() {
       filtered = filtered.filter((log) => log.date <= endOfDay);
     }
 
-    // Group by checkpoint
-    const grouped: GroupedLogs = {};
-    filtered.forEach((log) => {
-      const checkpointId = String(log.checkpointId);
-      if (!grouped[checkpointId]) {
-        const checkpoint = checkpoints.find((cp: any) => String(cp.id) === checkpointId);
-        grouped[checkpointId] = {
-          checkpointName: checkpoint?.name || log.checkpointName || checkpointId,
-          logs: [],
-        };
-      }
-      grouped[checkpointId].logs.push(log);
-    });
+    return filtered;
+  }, [checkIns, checkpoints, userNameById, dateFrom, dateTo]);
 
-    // Sort logs within each group by date descending
-    Object.values(grouped).forEach((group) => {
-      group.logs.sort((a, b) => b.date.getTime() - a.date.getTime());
-    });
+  const columns = useMemo<ColumnDef<CheckInLogRow>[]>(
+    () => [
+      {
+        accessorKey: "resolvedCheckpointName",
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Checkpoint" />,
+        cell: ({ row }) => <span className="font-medium">{row.original.resolvedCheckpointName}</span>,
+      },
+      {
+        accessorKey: "resolvedUserName",
+        header: ({ column }) => <DataTableColumnHeader column={column} title="User" />,
+      },
+      {
+        accessorKey: "timestamp",
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Date" />,
+        cell: ({ row }) => format(row.original.date, "dd/MM/yyyy"),
+        sortingFn: (left, right) => left.original.date.getTime() - right.original.date.getTime(),
+      },
+      {
+        id: "time",
+        accessorFn: (row) => format(row.date, "HH:mm:ss"),
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Time" />,
+        cell: ({ row }) => <span className="font-mono text-xs text-muted-foreground">{format(row.original.date, "HH:mm:ss")}</span>,
+        sortingFn: (left, right) => left.original.date.getTime() - right.original.date.getTime(),
+      },
+    ],
+    [],
+  );
 
-    return grouped;
-  }, [checkIns, checkpoints, searchTerm, dateFrom, dateTo]);
+  const table = useReactTable({
+    data: tableData,
+    columns,
+    state: {
+      sorting,
+      columnVisibility,
+      globalFilter,
+      pagination,
+    },
+    onSortingChange: setSorting,
+    onColumnVisibilityChange: setColumnVisibility,
+    onGlobalFilterChange: setGlobalFilter,
+    onPaginationChange: setPagination,
+    globalFilterFn: (row, _columnId, filterValue) => {
+      const searchValue = String(filterValue).trim().toLowerCase();
+      if (!searchValue) return true;
 
-  const totalLogs = Object.values(groupedLogs).reduce((sum, group) => sum + group.logs.length, 0);
+      return (
+        row.original.resolvedCheckpointName.toLowerCase().includes(searchValue) ||
+        row.original.resolvedUserName.toLowerCase().includes(searchValue) ||
+        format(row.original.date, "dd/MM/yyyy HH:mm:ss").toLowerCase().includes(searchValue)
+      );
+    },
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFacetedRowModel: getFacetedRowModel(),
+    getFacetedUniqueValues: getFacetedUniqueValues(),
+  });
+
+  useEffect(() => {
+    setPagination((current) => ({ ...current, pageIndex: 0 }));
+  }, [globalFilter, dateFrom, dateTo]);
+
+  const totalLogs = table.getFilteredRowModel().rows.length;
 
   const exportLogs = () => {
     const csvContent = [
       ["Checkpoint", "User", "Date", "Time"],
-      ...Object.entries(groupedLogs).flatMap(([_, group]) =>
-        group.logs.map((log) => [
-          group.checkpointName,
-          userNameById.get(String(log.userId)) || log.userName || log.userId || "-",
-          format(log.date, "yyyy-MM-dd"),
-          format(log.date, "HH:mm:ss"),
-        ])
-      ),
+      ...table.getSortedRowModel().rows.map((row) => {
+        const log = row.original;
+        return [log.resolvedCheckpointName, log.resolvedUserName, format(log.date, "yyyy-MM-dd"), format(log.date, "HH:mm:ss")];
+      }),
     ]
       .map((row) => row.join(","))
       .join("\n");
@@ -187,18 +244,11 @@ export function CheckInLogs() {
 
   return (
     <>
-      <Header fixed>
-        <div className="ms-auto flex items-center space-x-4">
-          <Search />
-          <ThemeSwitch />
-          <ConfigDrawer />
-          <ProfileDropdown />
-        </div>
-      </Header>
-      <Main className="flex flex-1 flex-col gap-4">
+      <Header />
+      <Main className="flex flex-1 flex-col gap-6">
         <PageIntro
           title="Check-in Logs"
-          subtitle="Review check-in records grouped by checkpoint."
+          subtitle="Review and export check-in records."
           actions={
             <Button onClick={exportLogs} variant="outline" size="sm" disabled={totalLogs === 0}>
               <Download className="h-4 w-4 mr-2" />
@@ -206,83 +256,95 @@ export function CheckInLogs() {
             </Button>
           }
         />
+        <Card className={cn('max-sm:has-[div[role="toolbar"]]:mb-16', "flex flex-1 flex-col")}>
+          <CardContent className="flex flex-1 flex-col gap-4">
+            <DataTableToolbar
+              table={table}
+              searchPlaceholder="Filter by checkpoint, user, or date..."
+              extraContent={
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Date From</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !dateFrom && "text-muted-foreground")}>
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {dateFrom ? format(dateFrom, "dd/MM/yyyy") : "Pick a date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar mode="single" selected={dateFrom} onSelect={setDateFrom} />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
 
-        {/* Filters */}
-        <Card className="p-6">
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Search</Label>
-              <div className="relative">
-                <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search checkpoint, user..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
-              </div>
-            </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Date To</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !dateTo && "text-muted-foreground")}>
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {dateTo ? format(dateTo, "dd/MM/yyyy") : "Pick a date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar mode="single" selected={dateTo} onSelect={setDateTo} />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
 
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Date From</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !dateFrom && "text-muted-foreground")}>
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateFrom ? format(dateFrom, "dd/MM/yyyy") : "Pick a date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar mode="single" selected={dateFrom} onSelect={setDateFrom} initialFocus />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Date To</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !dateTo && "text-muted-foreground")}>
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateTo ? format(dateTo, "dd/MM/yyyy") : "Pick a date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar mode="single" selected={dateTo} onSelect={setDateTo} initialFocus />
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-        </Card>
-
-        {/* Grouped Logs Display */}
-        {isLoading ? (
-          <Card className="p-6">
-            <div className="text-center py-8 text-muted-foreground">Loading check-in logs...</div>
-          </Card>
-        ) : totalLogs === 0 ? (
-          <Card className="p-6">
-            <div className="text-center py-8 text-muted-foreground">{checkIns.length === 0 ? "No check-in records found" : "No records match your filters"}</div>
-          </Card>
-        ) : (
-          <div className="space-y-4">
-            {Object.entries(groupedLogs).map(([checkpointId, group]) => (
-              <Card key={checkpointId} className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold">{group.checkpointName}</h3>
-                  <span className="text-sm text-muted-foreground">{group.logs.length} records</span>
+                  <div className="flex items-end">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setDateFrom(undefined);
+                        setDateTo(undefined);
+                      }}
+                      disabled={!dateFrom && !dateTo}
+                    >
+                      Reset Dates
+                    </Button>
+                  </div>
                 </div>
+              }
+            />
 
-                <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {group.logs.map((log) => (
-                    <div key={log.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                      <div className="flex-1">
-                        <div className="font-medium">{userNameById.get(String(log.userId)) || log.userName || log.userId || "-"}</div>
-                        <div className="text-sm text-muted-foreground">{format(log.date, "dd/MM/yyyy p")}</div>
-                      </div>
-                      <div className="text-xs text-muted-foreground font-mono">{format(log.date, "HH:mm:ss")}</div>
-                    </div>
+            <div className="overflow-x-auto rounded-md border">
+              <Table>
+                <TableHeader>
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <TableRow key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <TableHead key={header.id} colSpan={header.colSpan}>
+                          {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                        </TableHead>
+                      ))}
+                    </TableRow>
                   ))}
-                </div>
-              </Card>
-            ))}
-          </div>
-        )}
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows.length ? (
+                    table.getRowModel().rows.map((row) => (
+                      <TableRow key={row.id}>
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
+                        ))}
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
+                        {isLoading ? "Loading check-in logs..." : checkIns.length === 0 ? "No check-in records found." : "No records match your filters."}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+
+            <DataTablePagination table={table} className="mt-auto" />
+          </CardContent>
+        </Card>
       </Main>
     </>
   );

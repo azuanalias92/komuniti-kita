@@ -7,14 +7,10 @@ import { type CheckpointFormData } from "@/features/checkpoints/data/schema";
 import { Main } from "@/components/layout/main";
 import { PageIntro } from "@/components/layout/page-intro";
 import { Header } from "@/components/layout/header";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { ThemeSwitch } from "@/components/theme-switch";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/stores/auth-store";
 import { useAclStore } from "@/stores/acl-store";
-import { ConfigDrawer } from "@/components/config-drawer";
-import { Search } from "@/components/search";
 
 const route = getRouteApi("/_authenticated/checkpoints/");
 
@@ -49,14 +45,7 @@ export function CheckpointsPage() {
 
   return (
     <>
-      <Header fixed>
-        <div className="ms-auto flex items-center space-x-4">
-          <Search />
-          <ThemeSwitch />
-          <ConfigDrawer />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header />
       <Main className="flex flex-1 flex-col gap-4">
         <PageIntro
           title="Checkpoints"

@@ -1,5 +1,19 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  flexRender,
+  getCoreRowModel,
+  getFacetedRowModel,
+  getFacetedUniqueValues,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  type ColumnDef,
+  type PaginationState,
+  type SortingState,
+  type VisibilityState,
+  useReactTable,
+} from "@tanstack/react-table";
 import { Link, getRouteApi } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -7,10 +21,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
 import { PageIntro } from "@/components/layout/page-intro";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { ConfigDrawer } from "@/components/config-drawer";
-import { ProfileDropdown } from "@/components/profile-dropdown";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -18,6 +28,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { DataTableColumnHeader, DataTablePagination, DataTableToolbar } from "@/components/data-table";
 import { DatePicker } from "@/components/date-picker";
 import { format, parseISO } from "date-fns";
 import { useAuthStore } from "@/stores/auth-store";
@@ -38,8 +49,26 @@ type HomestayCheckIn = {
   submittedAt: string;
 };
 
+function formatDate(value?: string) {
+  if (!value) return "-";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "-" : format(date, "dd/MM/yyyy");
+}
+
+function formatDateTime(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "-" : format(date, "dd/MM/yyyy HH:mm");
+}
+
 export function HomestayCheckinList() {
   const { homestayId } = routeApi.useParams();
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [globalFilter, setGlobalFilter] = useState("");
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  });
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["homestay-checkins", homestayId],
@@ -135,11 +164,8 @@ export function HomestayCheckinList() {
     });
   };
 
-  const handleEditSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleEditSubmit = editFormApi.handleSubmit((values) => {
     if (!editingCheckin) return;
-
-    const values = editFormApi.getValues();
     const payload = {
       personInCharge: values.personInCharge,
       numberOfGuests: values.numberOfGuests,
@@ -153,18 +179,128 @@ export function HomestayCheckinList() {
     };
 
     updateMutation.mutate({ id: editingCheckin.id, body: payload });
-  };
+  });
+
+  const columns = useMemo<ColumnDef<HomestayCheckIn>[]>(
+    () => [
+      {
+        accessorKey: "personInCharge",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Person in Charge" />
+        ),
+        cell: ({ row }) => (
+          <span className="font-medium">{row.original.personInCharge}</span>
+        ),
+      },
+      {
+        accessorKey: "numberOfGuests",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Guests" />
+        ),
+      },
+      {
+        accessorKey: "dateOfArrival",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Arrival" />
+        ),
+        cell: ({ row }) => formatDate(row.original.dateOfArrival),
+      },
+      {
+        accessorKey: "dateOfDeparture",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Departure" />
+        ),
+        cell: ({ row }) => formatDate(row.original.dateOfDeparture),
+      },
+      {
+        accessorKey: "numberPlates",
+        header: "Plates",
+        cell: ({ row }) =>
+          row.original.numberPlates?.length
+            ? row.original.numberPlates.join(", ")
+            : "-",
+      },
+      {
+        accessorKey: "additionalNotes",
+        header: "Notes",
+        cell: ({ row }) => (
+          <span className="block max-w-xs truncate">
+            {row.original.additionalNotes || "-"}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "submittedAt",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Submitted At" />
+        ),
+        cell: ({ row }) => formatDateTime(row.original.submittedAt),
+      },
+      {
+        id: "actions",
+        header: () => <div className="text-right">Actions</div>,
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => (
+          <div className="text-right">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleEditClick(row.original)}
+            >
+              <Pencil className="mr-1 h-4 w-4" />
+              Edit
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    []
+  );
+
+  const table = useReactTable({
+    data: checkins,
+    columns,
+    state: {
+      sorting,
+      columnVisibility,
+      globalFilter,
+      pagination,
+    },
+    onSortingChange: setSorting,
+    onColumnVisibilityChange: setColumnVisibility,
+    onGlobalFilterChange: setGlobalFilter,
+    onPaginationChange: setPagination,
+    globalFilterFn: (row, _columnId, filterValue) => {
+      const searchValue = String(filterValue).trim().toLowerCase();
+      if (!searchValue) return true;
+
+      const plates = row.original.numberPlates.join(", ").toLowerCase();
+      return (
+        row.original.personInCharge.toLowerCase().includes(searchValue) ||
+        String(row.original.numberOfGuests).includes(searchValue) ||
+        plates.includes(searchValue) ||
+        (row.original.additionalNotes || "").toLowerCase().includes(searchValue) ||
+        formatDate(row.original.dateOfArrival).toLowerCase().includes(searchValue) ||
+        formatDate(row.original.dateOfDeparture).toLowerCase().includes(searchValue) ||
+        formatDateTime(row.original.submittedAt).toLowerCase().includes(searchValue)
+      );
+    },
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFacetedRowModel: getFacetedRowModel(),
+    getFacetedUniqueValues: getFacetedUniqueValues(),
+  });
+
+  useEffect(() => {
+    setPagination((current) => ({ ...current, pageIndex: 0 }));
+  }, [globalFilter, checkins.length]);
 
   return (
     <>
-      <Header fixed>
-        <Search />
-        <div className="ms-auto flex items-center space-x-4">
-          <ThemeSwitch />
-          <ConfigDrawer />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header />
 
       <Main className="flex flex-1 flex-col gap-4">
         <PageIntro
@@ -174,7 +310,7 @@ export function HomestayCheckinList() {
             <>
               <Button asChild variant="outline" size="sm">
                 <Link to="/homestay">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  <ArrowLeft className="mr-2 h-4 w-4" />
                   Back
                 </Link>
               </Button>
@@ -187,50 +323,64 @@ export function HomestayCheckinList() {
           }
         />
 
-        {isLoading && <div className="text-muted-foreground">Loading check-ins...</div>}
-        {error && <div className="text-destructive">{(error as Error).message}</div>}
-        {!isLoading && checkins.length === 0 && <div className="text-muted-foreground">No check-ins found for this homestay.</div>}
-        {checkins.length > 0 && (
-          <Card>
-            <CardContent className="p-6">
-              <div className="overflow-hidden rounded-md border">
+        <Card className="max-sm:has-[div[role='toolbar']]:mb-16">
+          <CardContent className="flex flex-col gap-4 p-6">
+            <DataTableToolbar
+              table={table}
+              searchPlaceholder="Filter by guest, plate, notes, or date..."
+            />
+            <div className="overflow-x-auto rounded-md border">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>Person in Charge</TableHead>
-                      <TableHead>Guests</TableHead>
-                      <TableHead>Arrival</TableHead>
-                      <TableHead>Departure</TableHead>
-                      <TableHead>Plates</TableHead>
-                      <TableHead>Notes</TableHead>
-                      <TableHead>Submitted At</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {checkins.map((checkin) => (
-                      <TableRow key={checkin.id}>
-                        <TableCell className="font-medium">{checkin.personInCharge}</TableCell>
-                        <TableCell>{checkin.numberOfGuests}</TableCell>
-                        <TableCell>{checkin.dateOfArrival ? format(new Date(checkin.dateOfArrival), "dd/MM/yyyy") : "-"}</TableCell>
-                        <TableCell>{checkin.dateOfDeparture ? format(new Date(checkin.dateOfDeparture), "dd/MM/yyyy") : "-"}</TableCell>
-                        <TableCell>{checkin.numberPlates?.length ? checkin.numberPlates.join(", ") : "-"}</TableCell>
-                        <TableCell className="max-w-xs truncate">{checkin.additionalNotes || "-"}</TableCell>
-                        <TableCell>{format(new Date(checkin.submittedAt), "dd/MM/yyyy HH:mm")}</TableCell>
-                        <TableCell>
-                          <Button variant="outline" size="sm" onClick={() => handleEditClick(checkin)}>
-                            <Pencil className="h-4 w-4 mr-1" />
-                            Edit
-                          </Button>
-                        </TableCell>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <TableRow key={headerGroup.id}>
+                        {headerGroup.headers.map((header) => (
+                          <TableHead key={header.id} colSpan={header.colSpan}>
+                            {header.isPlaceholder
+                              ? null
+                              : flexRender(
+                                  header.column.columnDef.header,
+                                  header.getContext()
+                                )}
+                          </TableHead>
+                        ))}
                       </TableRow>
                     ))}
+                  </TableHeader>
+                  <TableBody>
+                    {table.getRowModel().rows.length ? (
+                      table.getRowModel().rows.map((row) => (
+                        <TableRow key={row.id}>
+                          {row.getVisibleCells().map((cell) => (
+                            <TableCell key={cell.id}>
+                              {flexRender(
+                                cell.column.columnDef.cell,
+                                cell.getContext()
+                              )}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell
+                          colSpan={columns.length}
+                          className="h-24 text-center text-muted-foreground"
+                        >
+                          {isLoading
+                            ? "Loading check-ins..."
+                            : error
+                              ? (error as Error).message
+                              : "No check-ins found for this homestay."}
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </div>
-            </CardContent>
-          </Card>
-        )}
+            <DataTablePagination table={table} className="mt-auto" />
+          </CardContent>
+        </Card>
 
         {/* Edit Dialog */}
         <Dialog open={!!editingCheckin} onOpenChange={(open) => !open && setEditingCheckin(null)}>

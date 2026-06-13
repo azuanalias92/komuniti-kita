@@ -156,7 +156,11 @@ export function Roles() {
       return;
     }
     const updated = await res.json();
-    setRoles((list) => list.map((r) => (r.id === selectedRole.id ? { id: r.id, name: String(updated.name || editingRole.name), description: String(updated.description || editingRole.description) } : r)));
+    setRoles((list) =>
+      list.map((r) =>
+        r.id === selectedRole.id ? { id: r.id, name: String(updated.name || editingRole.name), description: String(updated.description || editingRole.description) } : r,
+      ),
+    );
     setSelectedRole({ id: selectedRole.id, name: editingRole.name.trim() });
     if (acl.role === updated.name || acl.role === editingRole.name.trim()) {
       await acl.loadForRole(editingRole.name.trim());
@@ -175,15 +179,9 @@ export function Roles() {
         </div>
       </Header>
       <Main className="flex flex-1 flex-col gap-4">
-        <PageIntro
-          title="Roles"
-          subtitle="Manage roles and access permissions."
-        />
+        <PageIntro title="Roles" subtitle="Manage roles and access permissions." />
         <div className="flex flex-1 min-h-0 flex-col gap-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Roles</CardTitle>
-            </CardHeader>
             <CardContent>
               <div className="flex flex-col gap-4 lg:flex-row">
                 <div className="flex-1 overflow-x-auto">
@@ -216,52 +214,56 @@ export function Roles() {
                     </TableBody>
                   </Table>
                 </div>
-                <div className="w-full lg:w-[360px]">
-                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onCreateRole)} className="grid gap-3">
-                      <FormField
-                        name="name"
-                        control={form.control}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Name</FormLabel>
-                            <FormControl>
-                              <Input placeholder="e.g. manager" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        name="description"
-                        control={form.control}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Description</FormLabel>
-                            <FormControl>
-                              <Input placeholder="optional" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        name="startPage"
-                        control={form.control}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Starting Page</FormLabel>
-                            <FormControl>
-                              <Input placeholder="e.g. /dashboard or /check-in" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <Button type="submit">Create Role</Button>
-                    </form>
-                  </Form>
-                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent>
+              <div className="w-full lg:w-90">
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onCreateRole)} className="grid gap-3">
+                    <FormField
+                      name="name"
+                      control={form.control}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g. manager" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      name="description"
+                      control={form.control}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description</FormLabel>
+                          <FormControl>
+                            <Input placeholder="optional" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      name="startPage"
+                      control={form.control}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Starting Page</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g. /dashboard or /check-in" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button type="submit">Create Role</Button>
+                  </form>
+                </Form>
               </div>
             </CardContent>
           </Card>
@@ -278,23 +280,13 @@ export function Roles() {
               </CardHeader>
               <CardContent className="flex-1 min-h-0">
                 <div className="mb-4 grid gap-3 sm:grid-cols-3">
-                  <Input
-                    value={editingRole.name}
-                    onChange={(e) => setEditingRole((s) => ({ ...s, name: e.target.value }))}
-                    placeholder="Role name"
-                  />
-                  <Input
-                    value={editingRole.description}
-                    onChange={(e) => setEditingRole((s) => ({ ...s, description: e.target.value }))}
-                    placeholder="Description"
-                  />
-                  <Input
-                    value={editingRole.startPage}
-                    onChange={(e) => setEditingRole((s) => ({ ...s, startPage: e.target.value }))}
-                    placeholder="Starting page e.g. /dashboard"
-                  />
+                  <Input value={editingRole.name} onChange={(e) => setEditingRole((s) => ({ ...s, name: e.target.value }))} placeholder="Role name" />
+                  <Input value={editingRole.description} onChange={(e) => setEditingRole((s) => ({ ...s, description: e.target.value }))} placeholder="Description" />
+                  <Input value={editingRole.startPage} onChange={(e) => setEditingRole((s) => ({ ...s, startPage: e.target.value }))} placeholder="Starting page e.g. /dashboard" />
                   <div className="sm:col-span-3">
-                    <Button variant="outline" onClick={onSaveRoleInfo}>Save Role</Button>
+                    <Button variant="outline" onClick={onSaveRoleInfo}>
+                      Save Role
+                    </Button>
                   </div>
                 </div>
                 <Table>
