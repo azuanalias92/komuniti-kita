@@ -22,7 +22,7 @@ export async function onRequestGet({ env, request }: { env: Env; request: Reques
       headers: { 'content-type': 'application/json' }
     })
   } catch (e) {
-    return new Response(JSON.stringify({ error: 'Failed to fetch settings', detail: String(e) }), { status: 500 })
+    return new Response(JSON.stringify({ error: 'Failed to fetch settings' }), { status: 500 })
   }
 }
 
