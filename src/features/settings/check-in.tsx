@@ -10,6 +10,9 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
+import { Header } from "@/components/layout/header";
+import { Main } from "@/components/layout/main";
+import { PageIntro } from "@/components/layout/page-intro";
 
 const settingsSchema = z.object({
   radius: z.coerce.number().min(1, "Radius must be at least 1 meter"),
@@ -105,93 +108,111 @@ export function CheckInSettings() {
 
   if (isLoading) {
     return (
-      <Card>
-        <CardContent className="py-6 text-sm text-muted-foreground">
-          Loading settings...
-        </CardContent>
-      </Card>
+      <>
+        <Header />
+        <Main className="flex flex-1 flex-col gap-4">
+          <PageIntro title="Check-in Configuration" subtitle="Manage geofence radius and check-in interval settings." />
+          <Card>
+            <CardContent className="py-6 text-sm text-muted-foreground">
+              Loading settings...
+            </CardContent>
+          </Card>
+        </Main>
+      </>
     );
   }
 
   if (isError) {
     return (
-      <Card>
-        <CardContent className="flex flex-col gap-4 py-6">
-          <div>
-            <p className="font-medium text-destructive">Unable to load check-in settings</p>
-            <p className="text-sm text-muted-foreground">
-              {getApiErrorMessage(error, "Failed to fetch settings.")}
-            </p>
-          </div>
-          <div className="flex justify-end">
-            <Button type="button" variant="outline" onClick={() => void refetch()}>
-              Retry
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <>
+        <Header />
+        <Main className="flex flex-1 flex-col gap-4">
+          <PageIntro title="Check-in Configuration" subtitle="Manage geofence radius and check-in interval settings." />
+          <Card>
+            <CardContent className="flex flex-col gap-4 py-6">
+              <div>
+                <p className="font-medium text-destructive">Unable to load check-in settings</p>
+                <p className="text-sm text-muted-foreground">
+                  {getApiErrorMessage(error, "Failed to fetch settings.")}
+                </p>
+              </div>
+              <div className="flex justify-end">
+                <Button type="button" variant="outline" onClick={() => void refetch()}>
+                  Retry
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </Main>
+      </>
     );
   }
 
   return (
-    <Card>
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <FormField
-              control={form.control}
-              name="radius"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Geofence Radius (meters)</FormLabel>
-                  <FormControl>
-                    <Input type="number" disabled={!isEditing} {...field} />
-                  </FormControl>
-                  <FormDescription>Maximum distance allowed from a checkpoint to check in.</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="timeWindow"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Check-in Interval (minutes)</FormLabel>
-                  <FormControl>
-                    <Input type="number" disabled={!isEditing} {...field} />
-                  </FormControl>
-                  <FormDescription>Minimum time required between check-ins at the same checkpoint.</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className="flex justify-end space-x-4">
-              {!isEditing ? (
-                <Button type="button" onClick={() => setIsEditing(true)}>
-                  Edit Settings
-                </Button>
-              ) : (
-                <>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setIsEditing(false);
-                      form.reset();
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={mutation.isPending}>
-                    {mutation.isPending ? "Saving..." : "Save Changes"}
-                  </Button>
-                </>
-              )}
-            </div>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
+    <>
+      <Header />
+      <Main className="flex flex-1 flex-col gap-4">
+        <PageIntro title="Check-in Configuration" subtitle="Manage geofence radius and check-in interval settings." />
+        <Card>
+          <CardContent>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                <FormField
+                  control={form.control}
+                  name="radius"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Geofence Radius (meters)</FormLabel>
+                      <FormControl>
+                        <Input type="number" disabled={!isEditing} {...field} />
+                      </FormControl>
+                      <FormDescription>Maximum distance allowed from a checkpoint to check in.</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="timeWindow"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Check-in Interval (minutes)</FormLabel>
+                      <FormControl>
+                        <Input type="number" disabled={!isEditing} {...field} />
+                      </FormControl>
+                      <FormDescription>Minimum time required between check-ins at the same checkpoint.</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="flex justify-end space-x-4">
+                  {!isEditing ? (
+                    <Button type="button" onClick={() => setIsEditing(true)}>
+                      Edit Settings
+                    </Button>
+                  ) : (
+                    <>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setIsEditing(false);
+                          form.reset();
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button type="submit" disabled={mutation.isPending}>
+                        {mutation.isPending ? "Saving..." : "Save Changes"}
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      </Main>
+    </>
   );
 }
