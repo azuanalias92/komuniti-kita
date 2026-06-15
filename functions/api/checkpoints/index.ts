@@ -82,7 +82,7 @@ export async function onRequestGet({ env, request }: { env: { DB: any }; request
 
     return Response.json({ page, pageSize, total: (total?.count ?? 0), data })
   } catch (_) {
-    return new Response(JSON.stringify({ error: 'Failed to fetch checkpoints' }), {
+    return new Response(JSON.stringify({ error: 'Failed to fetch checkpoints', detail: String(_) }), {
       status: 500,
       headers: { 'content-type': 'application/json' },
     })
@@ -158,7 +158,7 @@ export async function onRequestPost({ env, request }: { env: { DB: any }; reques
     }
     return new Response(JSON.stringify(created), { headers: { 'content-type': 'application/json' } })
   } catch (_) {
-    return new Response(JSON.stringify({ error: 'Failed to create checkpoint' }), {
+    return new Response(JSON.stringify({ error: 'Failed to create checkpoint', detail: String(_) }), {
       status: 500,
       headers: { 'content-type': 'application/json' },
     })
@@ -215,7 +215,7 @@ export async function onRequestPut({ env, request }: { env: { DB: any }; request
       headers: { 'content-type': 'application/json' },
     })
   } catch (_) {
-    return new Response(JSON.stringify({ error: 'Failed to update checkpoint' }), {
+    return new Response(JSON.stringify({ error: 'Failed to update checkpoint', detail: String(_) }), {
       status: 500,
       headers: { 'content-type': 'application/json' },
     })
@@ -253,7 +253,7 @@ export async function onRequestDelete({ env, request }: { env: { DB: any }; requ
 
     return new Response(null, { status: 204 })
   } catch (_) {
-    return new Response(JSON.stringify({ error: 'Failed to delete checkpoint' }), {
+    return new Response(JSON.stringify({ error: 'Failed to delete checkpoint', detail: String(_) }), {
       status: 500,
       headers: { 'content-type': 'application/json' },
     })
