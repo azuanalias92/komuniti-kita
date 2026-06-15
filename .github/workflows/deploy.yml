@@ -20,8 +20,10 @@ jobs:
           cache: yarn
 
       - name: Write wrangler.toml from GitHub Variable
+        env:
+          WRANGLER_TOML: ${{ vars.WRANGLER_TOML }}
         run: |
-          echo "${{ vars.WRANGLER_TOML }}" > wrangler.toml
+          echo "$WRANGLER_TOML" > wrangler.toml
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile
