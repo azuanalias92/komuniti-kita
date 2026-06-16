@@ -7,7 +7,7 @@ export async function onRequestPost({ request, env }: { request: Request; env: {
     });
   }
 
-  const body = await request.json();
+  const body = await request.json().catch(() => ({} as any));
   const inviteCode = typeof body.inviteCode === 'string' ? body.inviteCode.trim().toUpperCase() : '';
   const email = typeof body.email === 'string' ? body.email.trim() : '';
 

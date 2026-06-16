@@ -6,9 +6,12 @@ interface Env {
 
 export async function onRequestGet({ env, request }: { env: Env; request: Request }) {
   try {
-    if (!env.DB) return new Response(null, { status: 204 })
+    if (!(await hasPermission(env, request, '/settings', 'read'))) {
+      return new Response(JSON.stringify({ error: 'forbidden' }), { status: 403, headers: { 'content-type': 'application/json' } })
+    }
+    if (!env.DB) return new Response(null, { status: 204 });
 
-    const tenantId = getTenantId(request);
+    const tenantId = await getTenantId(env, request);
     await ensureSettingsTable(env.DB)
 
     const settings = await env.DB.prepare('SELECT * FROM check_in_settings WHERE tenant_id = ? LIMIT 1').bind(tenantId).first()
@@ -32,8 +35,8 @@ export async function onRequestPost({ request, env }: { request: Request, env: E
       return new Response(JSON.stringify({ error: 'forbidden' }), { status: 403 })
     }
 
-    const tenantId = getTenantId(request);
-    const body = await request.json() as { radius: number, timeWindow: number }
+    const tenantId = await getTenantId(env, request);
+    const body = await request.json().catch(() => ({} as any)) as { radius: number, timeWindow: number }
     const radius = Number(body.radius)
     const timeWindow = Number(body.timeWindow)
 

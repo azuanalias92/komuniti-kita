@@ -8,7 +8,7 @@ export async function onRequestGet({ request, env }: { request: Request; env: { 
     });
   }
 
-  const tenantId = getTenantId(request);
+  const tenantId = await getTenantId(env, request);
   const url = new URL(request.url);
   const statusFilter = url.searchParams.get('status') || 'pending';
 
@@ -55,8 +55,8 @@ export async function onRequestPost({ request, env }: { request: Request; env: {
     });
   }
 
-  const tenantId = getTenantId(request);
-  const user = getUserFromToken(request);
+  const tenantId = await getTenantId(env, request);
+  const user = await getUserFromToken(env, request);
   const url = new URL(request.url);
   const approvalId = url.searchParams.get('id');
   const action = url.searchParams.get('action') || '';

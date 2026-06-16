@@ -1,8 +1,11 @@
-import { getTenantId, isAllTenantsScope } from '../_lib/auth'
+import { getTenantId, isAllTenantsScope, hasPermission } from '../_lib/auth'
 
 export async function onRequestGet({ env, request }: { env: { DB: any }; request: Request }) {
   try {
-    const tenantId = getTenantId(request);
+    if (!(await hasPermission(env, request, '/billing', 'read'))) {
+      return new Response(JSON.stringify({ error: 'forbidden' }), { status: 403, headers: { 'content-type': 'application/json' } })
+    }
+    const tenantId = await getTenantId(env, request);
     const settings = await getSettings(env.DB)
     if (!settings) {
       return new Response(JSON.stringify({ frequency: 'monthly', rate: 0, period: null, data: [] }), {

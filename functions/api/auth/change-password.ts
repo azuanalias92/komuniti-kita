@@ -33,7 +33,7 @@ export async function onRequestPost({
   request: Request
   env: { DB: any }
 }) {
-  const user = getUserFromToken(request)
+  const user = await getUserFromToken(env, request)
   if (!user?.email) {
     return new Response(JSON.stringify({ error: 'unauthorized' }), {
       status: 401,

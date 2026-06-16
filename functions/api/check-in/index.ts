@@ -23,7 +23,7 @@ export async function onRequestGet({ request, env }: { request: Request; env: En
     const authHeader = request.headers.get("Authorization");
     if (!authHeader) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
 
-    const tenantId = getTenantId(request);
+    const tenantId = await getTenantId(env, request);
     const url = new URL(request.url);
     const userId = url.searchParams.get("userId");
     const checkpointId = url.searchParams.get("checkpointId");
@@ -108,8 +108,8 @@ export async function onRequestPost({ request, env }: { request: Request; env: E
     // Basic auth check - in real app use middleware
     if (!authHeader) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
 
-    const tenantId = getTenantId(request);
-    const body = (await request.json()) as { latitude: number; longitude: number; userId: string };
+    const tenantId = await getTenantId(env, request);
+    const body = (await request.json().catch(() => ({} as any))) as { latitude: number; longitude: number; userId: string };
     const { latitude, longitude, userId } = body;
 
     if (!latitude || !longitude || !userId) {

@@ -3,7 +3,7 @@ import { hashPassword } from '../../_lib/password'
 
 export async function onRequestPut({ env, request, params }: { env: { DB: any }; request: Request; params: { userId: string } }) {
   try {
-    const tenantId = getTenantId(request);
+    const tenantId = await getTenantId(env, request);
     const contentType = request.headers.get('content-type') || ''
     if (!contentType.includes('application/json')) {
       return new Response(JSON.stringify({ error: 'invalid_content_type' }), {
@@ -12,7 +12,7 @@ export async function onRequestPut({ env, request, params }: { env: { DB: any };
       })
     }
 
-    const body = await request.json()
+    const body = await request.json().catch(() => ({} as any))
     const firstName = String(body.firstName || '').trim()
     const lastName = String(body.lastName || '').trim()
     const username = String(body.username || '').trim()

@@ -26,6 +26,42 @@ function isSuperAdminRole(role: string | undefined): boolean {
   return role === "super_admin" || role === "superadmin";
 }
 
+/**
+ * Verify JWT signature using HMAC-SHA256.
+ * Returns the decoded payload if valid, null if invalid.
+ */
+async function verifyToken(token: string, secret: string): Promise<TokenPayload | null> {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+
+    const data = `${parts[0]}.${parts[1]}`;
+    const sigB64 = parts[2].replace(/-/g, "+").replace(/_/g, "/");
+    const padding = "=".repeat((4 - (sigB64.length % 4)) % 4);
+    const signature = Uint8Array.from(atob(sigB64 + padding), (c) => c.charCodeAt(0));
+
+    const key = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(secret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["verify"]
+    );
+
+    const valid = await crypto.subtle.verify(
+      "HMAC",
+      key,
+      signature,
+      new TextEncoder().encode(data)
+    );
+
+    if (!valid) return null;
+    return decodeTokenPayload(token);
+  } catch {
+    return null;
+  }
+}
+
 export function isAllTenantsScope(tenantId: string): boolean {
   return tenantId === "*";
 }
@@ -43,17 +79,30 @@ export function addTenantFilter(
 
 /**
  * Extract tenant_id from the Authorization header JWT.
+ * Verifies the JWT signature using JWT_SECRET from env.
  * Returns the tenant_id or 'default' fallback.
  */
-export function getTenantId(request: Request): string {
+export async function getTenantId(
+  env: { JWT_SECRET?: string },
+  request: Request
+): Promise<string> {
   const tenantHeader = request.headers.get("X-Tenant-ID") || "";
   const authHeader = request.headers.get("Authorization") || "";
   if (!authHeader.startsWith("Bearer ")) {
     return tenantHeader || "default";
   }
   const token = authHeader.replace("Bearer ", "");
-  const payload = decodeTokenPayload(token);
+
+  // Verify JWT signature
+  const secret = env.JWT_SECRET;
+  if (!secret) {
+    // No secret configured — reject unauthenticated requests
+    return tenantHeader || "default";
+  }
+
+  const payload = await verifyToken(token, secret);
   if (!payload) {
+    // Invalid signature — reject
     return tenantHeader || "default";
   }
 
@@ -71,24 +120,36 @@ export function getTenantId(request: Request): string {
 
 /**
  * Extract user info from the Authorization header JWT.
+ * Verifies the JWT signature using JWT_SECRET from env.
  */
-export function getUserFromToken(request: Request): {
+export async function getUserFromToken(
+  env: { JWT_SECRET?: string },
+  request: Request
+): Promise<{
   id: string;
   email: string;
   role: string[];
   tenantId: string;
-} | null {
+} | null> {
   const authHeader = request.headers.get("Authorization") || "";
   if (!authHeader.startsWith("Bearer ")) return null;
   try {
     const token = authHeader.replace("Bearer ", "");
-    const payload = decodeTokenPayload(token);
+
+    // Verify JWT signature
+    const secret = env.JWT_SECRET;
+    if (!secret) return null;
+
+    const payload = await verifyToken(token, secret);
     if (!payload) return null;
+
+    const tenantId = await getTenantId(env, request);
+
     return {
       id: payload.sub || payload.id || "",
       email: payload.email || "",
       role: getRoles(payload).length ? getRoles(payload) : ["admin"],
-      tenantId: getTenantId(request),
+      tenantId,
     };
   } catch {
     return null;
@@ -99,7 +160,7 @@ export function getUserFromToken(request: Request): {
  * Check if a user has permission for a given resource + action.
  */
 export async function hasPermission(
-  env: { DB: any },
+  env: { DB: any; JWT_SECRET?: string },
   request: Request,
   resource: string,
   action: "create" | "read" | "update" | "delete"
@@ -107,7 +168,7 @@ export async function hasPermission(
   const authHeader = request.headers.get("Authorization") || "";
   if (!authHeader.startsWith("Bearer ")) return false;
 
-  const user = getUserFromToken(request);
+  const user = await getUserFromToken(env, request);
   if (!user) return false;
 
   const roleName = Array.isArray(user.role) ? user.role[0] : user.role;

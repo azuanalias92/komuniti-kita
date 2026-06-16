@@ -9,11 +9,11 @@ export async function onRequestPost({ request, env }: { request: Request; env: {
     });
   }
 
-  const tenantId = getTenantId(request);
-  const user = getUserFromToken(request);
+  const tenantId = await getTenantId(env, request);
+  const user = await getUserFromToken(env, request);
 
   try {
-    const body = await request.json();
+    const body = await request.json().catch(() => ({} as any));
     const description = typeof body.description === 'string' ? body.description.trim() : '';
     const maxUses = typeof body.maxUses === 'number' ? body.maxUses : 0;
     const expiresInHours = typeof body.expiresInHours === 'number' ? body.expiresInHours : 0;
@@ -88,7 +88,7 @@ export async function onRequestGet({ request, env }: { request: Request; env: { 
     });
   }
 
-  const tenantId = getTenantId(request);
+  const tenantId = await getTenantId(env, request);
 
   try {
     await env.DB.prepare(
@@ -133,7 +133,7 @@ export async function onRequestDelete({ request, env }: { request: Request; env:
     });
   }
 
-  const tenantId = getTenantId(request);
+  const tenantId = await getTenantId(env, request);
   const url = new URL(request.url);
   const inviteId = url.searchParams.get('id');
 

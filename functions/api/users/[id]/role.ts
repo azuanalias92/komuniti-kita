@@ -32,7 +32,7 @@ async function ensureSchema(env: { DB: D1Database }) {
 
 export async function onRequestPatch({ request, params, env }: { request: Request; params: { id: string }; env: { DB: D1Database } }) {
   await ensureSchema(env)
-  const tenantId = getTenantId(request);
+  const tenantId = await getTenantId(env, request);
   const json = await request.json().catch(() => ({} as any))
   const role = typeof json.role === 'string' ? json.role.trim() : ''
   if (!role) {

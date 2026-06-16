@@ -57,8 +57,8 @@ export async function onRequestPut({ env, request, params }: { env: { DB: any };
     }
 
     const { id } = params
-    const tenantId = getTenantId(request);
-    const body = await request.json()
+    const tenantId = await getTenantId(env, request);
+    const body = await request.json().catch(() => ({} as any))
 
     await ensureResidentsTable(env.DB)
     
@@ -165,7 +165,7 @@ export async function onRequestDelete({ env, request, params }: { env: { DB: any
     }
 
     const { id } = params
-    const tenantId = getTenantId(request);
+    const tenantId = await getTenantId(env, request);
 
     await ensureResidentsTable(env.DB)
 

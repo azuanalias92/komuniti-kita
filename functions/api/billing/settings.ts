@@ -7,7 +7,7 @@ interface Env {
 export async function onRequestGet({ env, request }: { env: Env; request: Request }) {
   try {
     await ensureSettingsTable(env.DB)
-    const tenantId = getTenantId(request);
+    const tenantId = await getTenantId(env, request);
     const row = await env.DB.prepare('SELECT id, rate, frequency, qr_key, bg_key, bank_name, account_number, start_date, updated_at FROM billing_settings WHERE tenant_id = ? ORDER BY updated_at DESC LIMIT 1').bind(tenantId).first()
     const tenant = await env.DB.prepare('SELECT name FROM tenants WHERE id = ?').bind(tenantId).first() as { name?: string } | null
     if (!row) return new Response(null, { status: 204 })
@@ -36,7 +36,7 @@ export async function onRequestPost({ env, request }: { env: Env; request: Reque
       return new Response(JSON.stringify({ error: 'forbidden' }), { status: 403, headers: { 'content-type': 'application/json' } })
     }
 
-    const tenantId = getTenantId(request);
+    const tenantId = await getTenantId(env, request);
     const body = await request.json().catch(() => ({} as any))
     const rate = Number(body.rate)
     const frequency = String(body.frequency || 'monthly')
@@ -74,7 +74,7 @@ export async function onRequestPost({ env, request }: { env: Env; request: Reque
         .run()
     }
 
-    const changedBy = getUserFromToken(request)
+    const changedBy = await getUserFromToken(env, request)
     await env.DB.prepare(
       'INSERT INTO billing_settings_history (id, tenant_id, prev_rate, prev_frequency, prev_qr_key, prev_bg_key, prev_start_date, new_rate, new_frequency, new_qr_key, new_bg_key, new_start_date, changed_at, changed_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
     ).bind(

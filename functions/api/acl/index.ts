@@ -5,7 +5,7 @@ export async function onRequestGet({ request, env }: { request: Request; env: { 
     return new Response(JSON.stringify([]), { headers: { 'content-type': 'application/json' } })
   }
   await ensureSchema(env)
-  const tenantId = getTenantId(request);
+  const tenantId = await getTenantId(env, request);
   if (isAllTenantsScope(tenantId)) {
     return new Response(JSON.stringify([]), { headers: { 'content-type': 'application/json' } })
   }
@@ -34,7 +34,7 @@ export async function onRequestPost({ request, env }: { request: Request; env: {
     return new Response(JSON.stringify({ ok: true }), { headers: { 'content-type': 'application/json' } })
   }
   await ensureSchema(env)
-  const tenantId = getTenantId(request);
+  const tenantId = await getTenantId(env, request);
   const json = await request.json().catch(() => ({} as any))
   const roleName = typeof json.role === 'string' ? json.role.trim() : ''
   const permissions = Array.isArray(json.permissions) ? json.permissions : []

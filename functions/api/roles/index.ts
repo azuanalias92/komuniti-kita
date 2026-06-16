@@ -3,7 +3,7 @@ import { addTenantFilter, getTenantId } from '../_lib/auth'
 export async function onRequestGet({ env, request }: { env: { DB: any }; request: Request }) {
   try {
     await ensureSchema(env)
-    const tenantId = getTenantId(request);
+    const tenantId = await getTenantId(env, request);
     const where: string[] = []
     const params: unknown[] = []
     addTenantFilter(where, params, tenantId)
@@ -20,7 +20,7 @@ export async function onRequestGet({ env, request }: { env: { DB: any }; request
 export async function onRequestPost({ request, env }: { request: Request; env: { DB: any } }) {
   try {
     await ensureSchema(env)
-    const tenantId = getTenantId(request);
+    const tenantId = await getTenantId(env, request);
     const json = await request.json().catch(() => ({} as any))
     const name = typeof json.name === 'string' ? json.name.trim() : ''
     const description = typeof json.description === 'string' ? json.description.trim() : ''

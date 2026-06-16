@@ -2,8 +2,11 @@ import { addTenantFilter, hasPermission, getTenantId } from '../../_lib/auth'
 
 export async function onRequestGet({ env, request }: { env: { DB: any }; request: Request }) {
   try {
+    if (!(await hasPermission(env, request, '/billing', 'read'))) {
+      return new Response(JSON.stringify({ error: 'forbidden' }), { status: 403, headers: { 'content-type': 'application/json' } })
+    }
     await ensurePaymentsTable(env.DB)
-    const tenantId = getTenantId(request);
+    const tenantId = await getTenantId(env, request);
     const url = new URL(request.url)
     const houseId = url.searchParams.get('houseId')
     const status = url.searchParams.get('status')
@@ -28,7 +31,7 @@ export async function onRequestGet({ env, request }: { env: { DB: any }; request
 export async function onRequestPost({ env, request }: { env: { DB: any }; request: Request }) {
   try {
     await ensurePaymentsTable(env.DB)
-    const tenantId = getTenantId(request);
+    const tenantId = await getTenantId(env, request);
     const body = await request.json().catch(() => ({} as any))
     const houseId = String(body.houseId || '')
     const amount = Number(body.amount)
@@ -61,7 +64,7 @@ export async function onRequestPut({ env, request }: { env: { DB: any }; request
       return new Response(JSON.stringify({ error: 'forbidden' }), { status: 403, headers: { 'content-type': 'application/json' } })
     }
     await ensurePaymentsTable(env.DB)
-    const tenantId = getTenantId(request);
+    const tenantId = await getTenantId(env, request);
     const body = await request.json().catch(() => ({} as any))
     const id = String(body.id || '')
     const status = String(body.status || '')

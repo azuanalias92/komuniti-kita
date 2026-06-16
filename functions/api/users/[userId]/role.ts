@@ -14,7 +14,7 @@ export async function onRequestPatch({ request, params, env }: {
       })
     }
 
-    const tenantId = getTenantId(request);
+    const tenantId = await getTenantId(env, request);
 
     const contentType = request.headers.get('content-type') || ''
     if (!contentType.includes('application/json')) {
@@ -24,7 +24,7 @@ export async function onRequestPatch({ request, params, env }: {
       })
     }
 
-    const body = await request.json()
+    const body = await request.json().catch(() => ({} as any))
     const { role } = body
 
     const validRoles = ['admin', 'owner', 'guard']

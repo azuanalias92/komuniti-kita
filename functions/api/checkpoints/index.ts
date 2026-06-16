@@ -27,7 +27,7 @@ export async function onRequestGet({ env, request }: { env: { DB: any }; request
       })
     }
 
-    const tenantId = getTenantId(request);
+    const tenantId = await getTenantId(env, request);
     const url = new URL(request.url)
     const page = Math.max(1, Number(url.searchParams.get('page') || '1'))
     const pageSize = Math.max(1, Math.min(100, Number(url.searchParams.get('pageSize') || '10')))
@@ -119,7 +119,7 @@ export async function onRequestPost({ env, request }: { env: { DB: any }; reques
       })
     }
 
-    const tenantId = getTenantId(request);
+    const tenantId = await getTenantId(env, request);
 
     await ensureCheckpointsTable(env.DB)
 
@@ -182,7 +182,7 @@ export async function onRequestPut({ env, request }: { env: { DB: any }; request
       })
     }
 
-    const tenantId = getTenantId(request);
+    const tenantId = await getTenantId(env, request);
 
     const body = await request.json().catch(() => ({} as any))
     const id = body.id
@@ -231,7 +231,7 @@ export async function onRequestDelete({ env, request }: { env: { DB: any }; requ
       })
     }
 
-    const tenantId = getTenantId(request);
+    const tenantId = await getTenantId(env, request);
     const url = new URL(request.url)
     const id = url.searchParams.get('id')
 

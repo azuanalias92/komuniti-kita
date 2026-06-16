@@ -1,7 +1,7 @@
 import { getUserFromToken } from '../_lib/auth'
 
 function isSuperAdmin(request: Request) {
-  const user = getUserFromToken(request)
+  const user = await getUserFromToken(env, request)
   return !!user?.role.some((role) => role === 'super_admin' || role === 'superadmin')
 }
 
@@ -326,22 +326,17 @@ export async function onRequestDelete({ request, env }: { request: Request; env:
     })
   }
 
-  await env.DB.exec(`
-    DELETE FROM tenant_invites WHERE tenant_id = '${id}';
-    DELETE FROM pending_approvals WHERE tenant_id = '${id}';
-    DELETE FROM users WHERE tenant_id = '${id}';
-    DELETE FROM roles WHERE tenant_id = '${id}';
-    DELETE FROM role_permissions WHERE tenant_id = '${id}';
-    DELETE FROM checkpoints WHERE tenant_id = '${id}';
-    DELETE FROM check_in_logs WHERE tenant_id = '${id}';
-    DELETE FROM residents WHERE tenant_id = '${id}';
-    DELETE FROM homestay_checkins WHERE tenant_id = '${id}';
-    DELETE FROM payments WHERE tenant_id = '${id}';
-    DELETE FROM billing_settings WHERE tenant_id = '${id}';
-    DELETE FROM billing_settings_history WHERE tenant_id = '${id}';
-    DELETE FROM billing_summary WHERE tenant_id = '${id}';
-    DELETE FROM tenants WHERE id = '${id}';
-  `)
+  // Cascade delete all tenant data in a transaction using parameterized queries
+  const tables = [
+    'tenant_invites', 'pending_approvals', 'users', 'roles',
+    'role_permissions', 'checkpoints', 'check_in_logs', 'residents',
+    'homestay_checkins', 'payments', 'billing_settings',
+    'billing_settings_history', 'billing_summary'
+  ];
+  for (const table of tables) {
+    await env.DB.prepare(`DELETE FROM ${table} WHERE tenant_id = ?`).bind(id).run();
+  }
+  await env.DB.prepare('DELETE FROM tenants WHERE id = ?').bind(id).run();
 
   return new Response(null, { status: 204 })
 }

@@ -3,7 +3,7 @@ import { getTenantId } from '../_lib/auth'
 export async function onRequestGet({ env, request }: { env: { DB: D1Database }; request: Request }) {
   try {
     await ensureHistory(env.DB)
-    const tenantId = getTenantId(request);
+    const tenantId = await getTenantId(env, request);
     const res = await env.DB.prepare('SELECT * FROM billing_settings_history WHERE tenant_id = ? ORDER BY changed_at DESC').bind(tenantId).all()
     return new Response(JSON.stringify(res.results || []), { headers: { 'content-type': 'application/json' } })
   } catch (e) {

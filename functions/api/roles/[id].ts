@@ -3,7 +3,7 @@ import { getTenantId } from '../_lib/auth'
 export async function onRequestGet({ params, env, request }: { params: { id: string }; env: { DB: D1Database }; request: Request }) {
   try {
     await ensureSchema(env)
-    const tenantId = getTenantId(request);
+    const tenantId = await getTenantId(env, request);
     const role = await env.DB.prepare(`SELECT id, name, description, start_page FROM roles WHERE id = ? AND tenant_id = ?`).bind(params.id, tenantId).first()
     if (!role) {
       return new Response(JSON.stringify({ error: 'not_found' }), {
@@ -25,7 +25,7 @@ export async function onRequestGet({ params, env, request }: { params: { id: str
 export async function onRequestPut({ request, params, env }: { request: Request; params: { id: string }; env: { DB: D1Database } }) {
   try {
     await ensureSchema(env)
-    const tenantId = getTenantId(request);
+    const tenantId = await getTenantId(env, request);
     const json = await request.json().catch(() => ({} as any))
     const name = typeof json.name === 'string' ? json.name.trim() : ''
     const description = typeof json.description === 'string' ? json.description.trim() : ''

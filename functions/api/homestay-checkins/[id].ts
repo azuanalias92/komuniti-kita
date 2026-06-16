@@ -9,9 +9,9 @@ export async function onRequestPut({ env, request, params }: { env: { DB: D1Data
       });
     }
 
-    const tenantId = getTenantId(request);
+    const tenantId = await getTenantId(env, request);
     const id = params.id;
-    const body = await request.json();
+    const body = await request.json().catch(() => ({} as any));
 
     if (!body.personInCharge || !body.numberOfGuests) {
       return new Response(JSON.stringify({ error: "personInCharge and numberOfGuests are required" }), {

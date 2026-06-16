@@ -1,8 +1,12 @@
-import { getTenantId } from '../_lib/auth'
+import { getTenantId, getUserFromToken } from '../_lib/auth'
 
-export async function onRequestGet({ env, request }: { env: { DB: D1Database }; request: Request }) {
+export async function onRequestGet({ env, request }: { env: { DB: D1Database; JWT_SECRET?: string }; request: Request }) {
   try {
-    const tenantId = getTenantId(request);
+    const user = await getUserFromToken(env, request);
+    if (!user?.email) {
+      return new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401, headers: { 'content-type': 'application/json' } })
+    }
+    const tenantId = await getTenantId(env, request);
     const url = new URL(request.url)
     const email = url.searchParams.get('email') || ''
     if (!email) return new Response(JSON.stringify({ error: 'invalid_email' }), { status: 400, headers: { 'content-type': 'application/json' } })
@@ -21,13 +25,17 @@ export async function onRequestGet({ env, request }: { env: { DB: D1Database }; 
   }
 }
 
-export async function onRequestPatch({ env, request }: { env: { DB: D1Database }; request: Request }) {
+export async function onRequestPatch({ env, request }: { env: { DB: D1Database; JWT_SECRET?: string }; request: Request }) {
   try {
-    const tenantId = getTenantId(request);
+    const user = await getUserFromToken(env, request);
+    if (!user?.email) {
+      return new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401, headers: { 'content-type': 'application/json' } })
+    }
+    const tenantId = await getTenantId(env, request);
     const contentType = request.headers.get('content-type') || ''
     if (!contentType.includes('application/json')) return new Response(JSON.stringify({ error: 'invalid_content_type' }), { status: 400, headers: { 'content-type': 'application/json' } })
 
-    const body = await request.json()
+    const body = await request.json().catch(() => ({} as any))
     const email = typeof body.email === 'string' ? body.email : ''
     const username = typeof body.username === 'string' ? body.username : undefined
     const firstName = typeof body.firstName === 'string' ? body.firstName : undefined
