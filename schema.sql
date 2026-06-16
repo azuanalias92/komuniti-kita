@@ -139,9 +139,11 @@ CREATE TABLE IF NOT EXISTS residents (
   id TEXT PRIMARY KEY,
   tenant_id TEXT NOT NULL DEFAULT 'default',
   house_no TEXT,
+  house_type TEXT,
   owners TEXT DEFAULT '[]',
   vehicles TEXT DEFAULT '[]',
-  house_type TEXT,
+  owners_json TEXT DEFAULT '[]',
+  vehicles_json TEXT DEFAULT '[]',
   created_at TEXT,
   updated_at TEXT
 );

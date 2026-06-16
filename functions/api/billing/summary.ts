@@ -107,16 +107,43 @@ function clampStartToSettings(period: { start: string; end: string }, settingsSt
 }
 
 async function ensureResidentsTable(db: any) {
-  await db.prepare(`
-    CREATE TABLE IF NOT EXISTS residents (
+  await db.prepare(
+    `CREATE TABLE IF NOT EXISTS residents (
       id TEXT PRIMARY KEY,
       tenant_id TEXT NOT NULL DEFAULT 'default',
-      house_no TEXT NOT NULL,
-      house_type TEXT NOT NULL,
-      owners_json TEXT NOT NULL,
-      vehicles_json TEXT NOT NULL
+      house_no TEXT,
+      house_type TEXT,
+      owners TEXT DEFAULT '[]',
+      vehicles TEXT DEFAULT '[]',
+      created_at TEXT,
+      updated_at TEXT
+    )`
+  ).run()
+
+  const info = await db.prepare('PRAGMA table_info(residents)').all()
+  const cols = new Set((info.results || []).map((r: any) => String(r.name)))
+
+  const addColumn = async (name: string, def: string) => {
+    if (cols.has(name)) return
+    await db.prepare(`ALTER TABLE residents ADD COLUMN ${name} ${def}`).run()
+    cols.add(name)
+  }
+
+  await addColumn("tenant_id", "TEXT NOT NULL DEFAULT 'default'")
+  await addColumn('house_no', 'TEXT')
+  await addColumn('house_type', 'TEXT')
+  await addColumn("owners", "TEXT NOT NULL DEFAULT '[]'")
+  await addColumn("vehicles", "TEXT NOT NULL DEFAULT '[]'")
+  await addColumn("owners_json", "TEXT NOT NULL DEFAULT '[]'")
+  await addColumn("vehicles_json", "TEXT NOT NULL DEFAULT '[]'")
+  await addColumn('created_at', 'TEXT')
+  await addColumn('updated_at', 'TEXT')
+
+  await db
+    .prepare(
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_residents_house_no ON residents(tenant_id, house_no)`
     )
-  `).run()
+    .run()
 }
 
 async function ensurePaymentsTable(db: any) {

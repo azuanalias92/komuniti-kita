@@ -113,6 +113,8 @@ export function Dashboard() {
                 <TabsList>
                   <TabsTrigger value="overview">Overview</TabsTrigger>
                   <TabsTrigger value="check-in-report">Check-in Report</TabsTrigger>
+                  <TabsTrigger value="financial-report">Financial Report</TabsTrigger>
+                  <TabsTrigger value="homestay-report">Homestay Report</TabsTrigger>
                 </TabsList>
               </div>
               <TabsContent value="overview" className="space-y-4">
@@ -181,6 +183,12 @@ export function Dashboard() {
               </TabsContent>
               <TabsContent value="check-in-report" className="space-y-4">
                 <CheckInReportPanel />
+              </TabsContent>
+              <TabsContent value="financial-report" className="space-y-4">
+                <FinancialReportPanel />
+              </TabsContent>
+              <TabsContent value="homestay-report" className="space-y-4">
+                <HomestayReportPanel checkinsData={checkinsData || []} />
               </TabsContent>
             </Tabs>
           </CardContent>
@@ -434,6 +442,223 @@ function CheckInReportPanel() {
               </BarChart>
             </ResponsiveContainer>
           </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function FinancialReportPanel() {
+  const year = String(new Date().getFullYear());
+  const month = String(new Date().getMonth() + 1);
+
+  const { data, isLoading, error } = useQuery<{
+    frequency: string;
+    rate: number;
+    period: { start: string; end: string } | null;
+    data: {
+      houseId: string;
+      houseNo: string;
+      amountDue: number;
+      amountPaid: number;
+      debit: number;
+      credit: number;
+      status: string;
+    }[];
+  } | null>({
+    queryKey: ["dashboard-financial-summary", year, month],
+    queryFn: async () => {
+      const params = new URLSearchParams({ frequency: "monthly", year, month });
+      const res = await fetch(`/api/billing/summary?${params.toString()}`);
+      if (res.status === 204) return null;
+      if (!res.ok) return null;
+      return await res.json();
+    },
+  });
+
+  const rows = data?.data || [];
+  const totals = rows.reduce(
+    (acc, r) => {
+      acc.due += Number(r.amountDue || 0);
+      acc.paid += Number(r.amountPaid || 0);
+      acc.debit += Number(r.debit || 0);
+      acc.credit += Number(r.credit || 0);
+      return acc;
+    },
+    { due: 0, paid: 0, debit: 0, credit: 0 },
+  );
+
+  const chartData = [
+    { name: "Due", amount: totals.due },
+    { name: "Paid", amount: totals.paid },
+    { name: "Debit", amount: totals.debit },
+    { name: "Credit", amount: totals.credit },
+  ];
+
+  return (
+    <div className="space-y-4">
+      {error ? (
+        <div className="text-destructive">Failed to load financial report.</div>
+      ) : null}
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Due</CardTitle>
+            <CardDescription>
+              {data?.period ? `${data.period.start} → ${data.period.end}` : "No billing period"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totals.due.toFixed(2)}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Paid</CardTitle>
+            <CardDescription>Confirmed payments</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totals.paid.toFixed(2)}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Debit</CardTitle>
+            <CardDescription>Outstanding</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totals.debit.toFixed(2)}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Credit</CardTitle>
+            <CardDescription>Overpayment</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totals.credit.toFixed(2)}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Billing Summary</CardTitle>
+          <CardDescription>{isLoading ? "Loading..." : "This month overview"}</CardDescription>
+        </CardHeader>
+        <CardContent className="h-72">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="amount" fill="#3b82f6" />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function HomestayReportPanel({ checkinsData }: { checkinsData: any[] }) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const totalCheckins = checkinsData.length;
+  const todayCheckins =
+    checkinsData.filter((c: any) => {
+      const ts = c.submittedAt || c.submitted_at || c.createdAt || c.created_at;
+      if (!ts) return false;
+      const d = new Date(ts);
+      if (Number.isNaN(d.getTime())) return false;
+      d.setHours(0, 0, 0, 0);
+      return d.getTime() === today.getTime();
+    }).length || 0;
+
+  const currentlyStaying =
+    checkinsData.filter((c: any) => {
+      try {
+        const arrivalRaw = c.dateOfArrival || c.date_of_arrival;
+        const departureRaw = c.dateOfDeparture || c.date_of_departure;
+        if (!arrivalRaw || !departureRaw) return false;
+        const arrival = parseISO(String(arrivalRaw));
+        const departure = parseISO(String(departureRaw));
+        const a = new Date(arrival);
+        const d = new Date(departure);
+        a.setHours(0, 0, 0, 0);
+        d.setHours(0, 0, 0, 0);
+        return a <= today && d >= today;
+      } catch {
+        return false;
+      }
+    }).length || 0;
+
+  const days = Array.from({ length: 14 }).map((_, idx) => {
+    const date = subDays(today, 13 - idx);
+    const start = startOfDay(date);
+    const end = endOfDay(date);
+    const count = checkinsData.filter((c: any) => {
+      const ts = c.submittedAt || c.submitted_at || c.createdAt || c.created_at;
+      if (!ts) return false;
+      const d = new Date(ts);
+      if (Number.isNaN(d.getTime())) return false;
+      return d >= start && d <= end;
+    }).length;
+    return { day: format(date, "dd MMM"), checkins: count };
+  });
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Card>
+          <CardHeader className="space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Check-ins</CardTitle>
+            <CardDescription>All time</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalCheckins}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Today</CardTitle>
+            <CardDescription>New arrivals</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{todayCheckins}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Currently Staying</CardTitle>
+            <CardDescription>Active homestays</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{currentlyStaying}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Check-ins (Last 14 Days)</CardTitle>
+          <CardDescription>Daily total</CardDescription>
+        </CardHeader>
+        <CardContent className="h-72">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={days}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="day" tick={{ fontSize: 12 }} interval={2} />
+              <YAxis allowDecimals={false} />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="checkins" fill="#22c55e" />
+            </BarChart>
+          </ResponsiveContainer>
         </CardContent>
       </Card>
     </div>

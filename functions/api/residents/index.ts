@@ -5,15 +5,39 @@ async function ensureResidentsTable(db: any) {
     `CREATE TABLE IF NOT EXISTS residents (
       id TEXT PRIMARY KEY,
       tenant_id TEXT NOT NULL DEFAULT 'default',
-      house_no TEXT NOT NULL,
-      house_type TEXT NOT NULL,
-      owners_json TEXT NOT NULL,
-      vehicles_json TEXT NOT NULL
+      house_no TEXT,
+      house_type TEXT,
+      owners TEXT DEFAULT '[]',
+      vehicles TEXT DEFAULT '[]',
+      created_at TEXT,
+      updated_at TEXT
     )`
-  ).run();
-  await db.prepare(
-    `CREATE UNIQUE INDEX IF NOT EXISTS idx_residents_house_no ON residents(tenant_id, house_no)`
-  ).run();
+  ).run()
+
+  const info = await db.prepare('PRAGMA table_info(residents)').all()
+  const cols = new Set((info.results || []).map((r: any) => String(r.name)))
+
+  const addColumn = async (name: string, def: string) => {
+    if (cols.has(name)) return
+    await db.prepare(`ALTER TABLE residents ADD COLUMN ${name} ${def}`).run()
+    cols.add(name)
+  }
+
+  await addColumn("tenant_id", "TEXT NOT NULL DEFAULT 'default'")
+  await addColumn('house_no', 'TEXT')
+  await addColumn('house_type', 'TEXT')
+  await addColumn("owners", "TEXT NOT NULL DEFAULT '[]'")
+  await addColumn("vehicles", "TEXT NOT NULL DEFAULT '[]'")
+  await addColumn("owners_json", "TEXT NOT NULL DEFAULT '[]'")
+  await addColumn("vehicles_json", "TEXT NOT NULL DEFAULT '[]'")
+  await addColumn('created_at', 'TEXT')
+  await addColumn('updated_at', 'TEXT')
+
+  await db
+    .prepare(
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_residents_house_no ON residents(tenant_id, house_no)`
+    )
+    .run()
 }
 
 export async function onRequestGet({ env, request }: { env: { DB: any }; request: Request }) {
@@ -48,8 +72,10 @@ export async function onRequestGet({ env, request }: { env: { DB: any }; request
     }
 
     if (filter) {
-      where.push("(house_no LIKE ? OR owners_json LIKE ? OR vehicles_json LIKE ?)");
-      params.push(`%${filter}%`, `%${filter}%`, `%${filter}%`);
+      where.push(
+        "(house_no LIKE ? OR COALESCE(owners_json, owners, '[]') LIKE ? OR COALESCE(vehicles_json, vehicles, '[]') LIKE ?)"
+      )
+      params.push(`%${filter}%`, `%${filter}%`, `%${filter}%`)
     }
 
     const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
@@ -62,8 +88,8 @@ export async function onRequestGet({ env, request }: { env: { DB: any }; request
       SELECT id,
              house_no as house_no,
              house_type as house_type,
-             owners_json as owners_json,
-             vehicles_json as vehicles_json
+             COALESCE(owners_json, owners, '[]') as owners_json,
+             COALESCE(vehicles_json, vehicles, '[]') as vehicles_json
       FROM residents
       ${whereSql}
       ORDER BY house_no ASC
@@ -164,11 +190,25 @@ export async function onRequestPost({ env, request }: { env: { DB: any }; reques
     }
 
     const insertSql = `
-      INSERT INTO residents (id, tenant_id, house_no, house_type, owners_json, vehicles_json)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO residents (id, tenant_id, house_no, house_type, owners, vehicles, owners_json, vehicles_json, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
     `;
 
-    await env.DB.prepare(insertSql).bind(id, tenantId, houseNo, houseType, JSON.stringify(owners), JSON.stringify(vehicles)).run();
+    const ownersJson = JSON.stringify(owners)
+    const vehiclesJson = JSON.stringify(vehicles)
+    await env.DB
+      .prepare(insertSql)
+      .bind(
+        id,
+        tenantId,
+        houseNo,
+        houseType,
+        ownersJson,
+        vehiclesJson,
+        ownersJson,
+        vehiclesJson
+      )
+      .run()
 
     const newResident = {
       id,

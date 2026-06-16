@@ -62,7 +62,7 @@ export function CheckpointDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className='sm:max-w-[425px]'>
+      <DialogContent className='sm:max-w-md'>
         <form onSubmit={form.handleSubmit(handleSubmit)}>
           <DialogHeader>
             <DialogTitle>

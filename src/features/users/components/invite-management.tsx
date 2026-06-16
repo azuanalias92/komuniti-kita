@@ -131,7 +131,7 @@ export function InviteManagement() {
                           {invite.code}
                         </code>
                       </TableCell>
-                      <TableCell className="max-w-[200px] truncate">
+                      <TableCell className="max-w-52 truncate">
                         {invite.description || '-'}
                       </TableCell>
                       <TableCell>

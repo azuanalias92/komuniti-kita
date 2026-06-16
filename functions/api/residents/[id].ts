@@ -1,5 +1,45 @@
 import { getTenantId, hasPermission } from '../_lib/auth'
 
+async function ensureResidentsTable(db: any) {
+  await db.prepare(
+    `CREATE TABLE IF NOT EXISTS residents (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL DEFAULT 'default',
+      house_no TEXT,
+      house_type TEXT,
+      owners TEXT DEFAULT '[]',
+      vehicles TEXT DEFAULT '[]',
+      created_at TEXT,
+      updated_at TEXT
+    )`
+  ).run()
+
+  const info = await db.prepare('PRAGMA table_info(residents)').all()
+  const cols = new Set((info.results || []).map((r: any) => String(r.name)))
+
+  const addColumn = async (name: string, def: string) => {
+    if (cols.has(name)) return
+    await db.prepare(`ALTER TABLE residents ADD COLUMN ${name} ${def}`).run()
+    cols.add(name)
+  }
+
+  await addColumn("tenant_id", "TEXT NOT NULL DEFAULT 'default'")
+  await addColumn('house_no', 'TEXT')
+  await addColumn('house_type', 'TEXT')
+  await addColumn("owners", "TEXT NOT NULL DEFAULT '[]'")
+  await addColumn("vehicles", "TEXT NOT NULL DEFAULT '[]'")
+  await addColumn("owners_json", "TEXT NOT NULL DEFAULT '[]'")
+  await addColumn("vehicles_json", "TEXT NOT NULL DEFAULT '[]'")
+  await addColumn('created_at', 'TEXT')
+  await addColumn('updated_at', 'TEXT')
+
+  await db
+    .prepare(
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_residents_house_no ON residents(tenant_id, house_no)`
+    )
+    .run()
+}
+
 export async function onRequestPut({ env, request, params }: { env: { DB: any }; request: Request; params: { id: string } }) {
   try {
     if (!env || !(env as any).DB || typeof (env as any).DB.prepare !== 'function') {
@@ -19,6 +59,8 @@ export async function onRequestPut({ env, request, params }: { env: { DB: any };
     const { id } = params
     const tenantId = getTenantId(request);
     const body = await request.json()
+
+    await ensureResidentsTable(env.DB)
     
     // Validate required fields
     if (!body.houseNo) {
@@ -57,6 +99,9 @@ export async function onRequestPut({ env, request, params }: { env: { DB: any };
       plate: String(vehicle.plate || '').trim()
     })).filter((v: { brand: string; model: string; plate: string }) => v.brand && v.model && v.plate) : []
 
+    const ownersJson = JSON.stringify(owners)
+    const vehiclesJson = JSON.stringify(vehicles)
+
     // Check if house number already exists for a different resident in this tenant
     const existingHouse = await env.DB.prepare(
       'SELECT id FROM residents WHERE tenant_id = ? AND house_no = ? AND id != ?'
@@ -71,15 +116,17 @@ export async function onRequestPut({ env, request, params }: { env: { DB: any };
 
     const updateSql = `
       UPDATE residents 
-      SET house_no = ?, house_type = ?, owners_json = ?, vehicles_json = ?
+      SET house_no = ?, house_type = ?, owners = ?, vehicles = ?, owners_json = ?, vehicles_json = ?, updated_at = datetime('now')
       WHERE id = ? AND tenant_id = ?
     `
 
     await env.DB.prepare(updateSql).bind(
       houseNo,
       houseType,
-      JSON.stringify(owners),
-      JSON.stringify(vehicles),
+      ownersJson,
+      vehiclesJson,
+      ownersJson,
+      vehiclesJson,
       id,
       tenantId
     ).run()
@@ -119,6 +166,8 @@ export async function onRequestDelete({ env, request, params }: { env: { DB: any
 
     const { id } = params
     const tenantId = getTenantId(request);
+
+    await ensureResidentsTable(env.DB)
 
     // Check if resident exists and belongs to this tenant
     const existingResident = await env.DB.prepare(

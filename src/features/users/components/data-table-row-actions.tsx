@@ -57,7 +57,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
             <span className='sr-only'>Open menu</span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align='end' className='w-[200px]'>
+        <DropdownMenuContent align='end' className='w-52'>
           {canUpdate && (
             <DropdownMenuItem
               onClick={() => {
