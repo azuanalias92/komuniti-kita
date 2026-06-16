@@ -42,9 +42,25 @@ export function syncTenantAfterAuth() {
   const { setTenants, setCurrentTenant } = useTenantStore.getState()
 
   if (auth.user?.role.includes('super_admin')) {
-    // Default super admin to the aggregate "all communities" scope.
-    setTenants(auth.user.tenants || [])
+    // Default super admin to the aggregate "all communities" scope,
+    // then fetch all tenants so the dropdown shows every community.
     setCurrentTenant('*')
+    fetch('/api/tenants')
+      .then((res) => {
+        if (!res.ok) return []
+        return res.json()
+      })
+      .then((data) => {
+        const allTenants = (data || []).map((t: any) => ({
+          id: t.id,
+          name: t.name,
+          slug: t.slug,
+        }))
+        setTenants(allTenants)
+      })
+      .catch(() => {
+        // Silently fail — user will have no tenants listed
+      })
   } else if (auth.user?.tenantId) {
     setTenants([
       {
