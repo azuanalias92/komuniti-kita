@@ -60,11 +60,19 @@ export async function onRequestPost({ env, request }: { env: Env; request: Reque
     await ensureHistoryTable(env.DB)
 
     const prev = await env.DB.prepare('SELECT rate, frequency, qr_key, bg_key, start_date FROM billing_settings WHERE tenant_id = ? ORDER BY updated_at DESC LIMIT 1').bind(tenantId).first()
-    const id = crypto.randomUUID()
     const now = new Date().toISOString()
-    await env.DB.prepare('INSERT INTO billing_settings (id, tenant_id, rate, frequency, qr_key, bg_key, bank_name, account_number, start_date, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-      .bind(id, tenantId, rate, frequency, qrKey, bgKey, bankName, accountNumber, startDate, now)
-      .run()
+
+    const existing = await env.DB.prepare('SELECT id FROM billing_settings WHERE tenant_id = ?').bind(tenantId).first()
+    if (existing) {
+      await env.DB.prepare('UPDATE billing_settings SET rate=?, frequency=?, qr_key=?, bg_key=?, bank_name=?, account_number=?, start_date=?, updated_at=? WHERE id=?')
+        .bind(rate, frequency, qrKey, bgKey, bankName, accountNumber, startDate, now, existing.id)
+        .run()
+    } else {
+      const id = crypto.randomUUID()
+      await env.DB.prepare('INSERT INTO billing_settings (id, tenant_id, rate, frequency, qr_key, bg_key, bank_name, account_number, start_date, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+        .bind(id, tenantId, rate, frequency, qrKey, bgKey, bankName, accountNumber, startDate, now)
+        .run()
+    }
 
     const changedBy = getUserFromToken(request)
     await env.DB.prepare(
