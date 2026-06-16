@@ -13,6 +13,7 @@ interface TenantState {
   setTenants: (tenants: Tenant[]) => void
   setCurrentTenant: (id: string) => void
   addTenant: (tenant: Tenant) => void
+  removeTenant: (id: string) => void
 }
 
 export const useTenantStore = create<TenantState>()(
@@ -34,6 +35,17 @@ export const useTenantStore = create<TenantState>()(
         set((state) => ({
           tenants: [...state.tenants.filter((t) => t.id !== tenant.id), tenant],
         })),
+
+      removeTenant: (id) =>
+        set((state) => {
+          const remaining = state.tenants.filter((t) => t.id !== id)
+          return {
+            tenants: remaining,
+            currentTenantId: state.currentTenantId === id
+              ? (remaining[0]?.id ?? null)
+              : state.currentTenantId,
+          }
+        }),
     }),
     {
       name: 'tenant-store',

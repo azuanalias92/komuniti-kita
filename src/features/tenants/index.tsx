@@ -138,6 +138,7 @@ export function Tenants() {
         throw new Error(json.error || "Failed to delete tenant");
       }
       setTenants((current) => current.filter((t) => t.id !== deletingTenant.id));
+      useTenantStore.getState().removeTenant(deletingTenant.id);
       toast.success(`Tenant "${deletingTenant.name}" deleted`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to delete tenant");
