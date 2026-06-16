@@ -6,7 +6,6 @@ import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
 import { PageIntro } from "@/components/layout/page-intro";
 import { Overview } from "./components/overview";
-import { Analytics } from "./components/analytics";
 import { RecentCheckins } from "./components/recent-checkins";
 import { Users, CheckCircle, Car, UserCheck } from "lucide-react";
 import { useAuthStore } from "@/stores/auth-store";
