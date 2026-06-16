@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import { toast } from "sonner";
+import { CheckCircle2, ArrowLeft } from "lucide-react";
 
 type Resident = { id: string; houseNo: string };
 type Settings = { rate: number; frequency: string; qrKey: string | null; bgKey?: string | null };
@@ -38,6 +39,9 @@ function PaymentPage() {
   const [houseId, setHouseId] = useState("");
   const [amount, setAmount] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [lastHouse, setLastHouse] = useState("");
   const qrUrl = useMemo(() => (settings?.qrKey ? `/api/r2/${settings.qrKey}` : ""), [settings]);
   const bgUrl = useMemo(() => (settings?.bgKey ? `/api/r2/${settings.bgKey}` : ""), [settings]);
 
@@ -52,7 +56,8 @@ function PaymentPage() {
       if (!amt || isNaN(amt) || amt <= 0) return toast.error("Amount is invalid");
       if (!file) return toast.error("Please upload a receipt");
 
-      const key = `receipts/${crypto.randomUUID()}-${file.name.replace(/\\s+/g, "_")}`;
+      setSubmitting(true);
+      const key = `receipts/${crypto.randomUUID()}-${file.name.replace(/\s+/g, "_")}`;
       const put = await apiFetch(`/api/r2/${key}`, { method: "PUT", headers: { "content-type": file.type || "application/octet-stream" }, body: file });
       if (!put.ok) throw new Error("Failed to upload receipt");
 
@@ -62,13 +67,52 @@ function PaymentPage() {
         body: JSON.stringify({ houseId, amount: amt, receiptKey: key }),
       });
       if (!post.ok) throw new Error("Failed to submit payment");
-      toast.success("Payment submitted");
-      setFile(null);
-      setAmount("");
-      setHouseId("");
+
+      const house = (residents || []).find((r) => r.id === houseId);
+      setLastHouse(house?.houseNo || houseId);
+      setSubmitted(true);
     } catch (e: any) {
       toast.error(e.message || "Submission error");
+    } finally {
+      setSubmitting(false);
     }
+  }
+
+  function resetForm() {
+    setHouseId("");
+    setAmount(settings?.rate ? String(settings.rate) : "");
+    setFile(null);
+    setSubmitted(false);
+  }
+
+  if (submitted) {
+    return (
+      <>
+        {bgUrl && <img src={bgUrl} alt="Background" className="pointer-events-none fixed inset-0 -z-10 h-full w-full object-cover opacity-50" />}
+        <div className="min-h-screen flex items-center justify-center px-4">
+          <Card className="w-full max-w-md text-center">
+            <CardHeader>
+              <div className="flex justify-center mb-2">
+                <CheckCircle2 className="h-16 w-16 text-green-500" />
+              </div>
+              <CardTitle className="text-2xl">Thank You!</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-muted-foreground">
+                Your payment for <span className="font-medium text-foreground">House {lastHouse}</span> has been submitted successfully.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                An admin will review and confirm your payment shortly.
+              </p>
+              <Button className="w-full gap-2" onClick={resetForm}>
+                <ArrowLeft className="h-4 w-4" />
+                Submit Another Payment
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </>
+    );
   }
 
   return (
@@ -87,7 +131,7 @@ function PaymentPage() {
             )}
             {settings && (
               <div className="text-sm text-muted-foreground">
-                Rate: RM {settings.rate} • {settings.frequency}
+                Rate: RM {settings.rate} &bull; {settings.frequency}
               </div>
             )}
           </CardContent>
@@ -120,8 +164,8 @@ function PaymentPage() {
               <Label>Receipt Image</Label>
               <Input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} />
             </div>
-            <Button className="w-full" onClick={handleSubmit}>
-              Submit
+            <Button className="w-full" disabled={submitting} onClick={handleSubmit}>
+              {submitting ? "Submitting..." : "Submit"}
             </Button>
           </CardContent>
         </Card>
