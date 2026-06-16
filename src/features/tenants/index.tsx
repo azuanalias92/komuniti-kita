@@ -29,6 +29,7 @@ import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
 import { PageIntro } from "@/components/layout/page-intro";
 import { useAuthStore } from "@/stores/auth-store";
+import { useTenantStore } from "@/stores/tenant-store";
 
 type Tenant = {
   id: string;
@@ -217,9 +218,11 @@ export function Tenants() {
       }
       if (editingTenant) {
         setTenants((current) => current.map((tenant) => (tenant.id === editingTenant.id ? (json as Tenant) : tenant)));
+        useTenantStore.getState().addTenant({ id: json.id, name: json.name, slug: json.slug });
         toast.success("Tenant updated");
       } else {
         setTenants((current) => [json as Tenant, ...current]);
+        useTenantStore.getState().addTenant({ id: json.id, name: json.name, slug: json.slug });
         toast.success("Tenant created");
       }
       setEditingTenant(null);
