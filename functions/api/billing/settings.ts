@@ -8,7 +8,7 @@ export async function onRequestGet({ env, request }: { env: Env; request: Reques
   try {
     await ensureSettingsTable(env.DB)
     const tenantId = getTenantId(request);
-    const row = await env.DB.prepare('SELECT id, rate, frequency, qr_key, bg_key, start_date, updated_at FROM billing_settings WHERE tenant_id = ? ORDER BY updated_at DESC LIMIT 1').bind(tenantId).first()
+    const row = await env.DB.prepare('SELECT id, rate, frequency, qr_key, bg_key, bank_name, account_number, start_date, updated_at FROM billing_settings WHERE tenant_id = ? ORDER BY updated_at DESC LIMIT 1').bind(tenantId).first()
     if (!row) return new Response(null, { status: 204 })
     return new Response(JSON.stringify({
       id: row.id,
@@ -16,6 +16,8 @@ export async function onRequestGet({ env, request }: { env: Env; request: Reques
       frequency: String(row.frequency || 'monthly'),
       qrKey: row.qr_key ? String(row.qr_key) : null,
       bgKey: row.bg_key ? String(row.bg_key) : null,
+      bankName: row.bank_name ? String(row.bank_name) : null,
+      accountNumber: row.account_number ? String(row.account_number) : null,
       startDate: String(row.start_date || ''),
       updatedAt: String(row.updated_at || '')
     }), { headers: { 'content-type': 'application/json' } })
@@ -38,6 +40,8 @@ export async function onRequestPost({ env, request }: { env: Env; request: Reque
     const frequency = String(body.frequency || 'monthly')
     const qrKey = typeof body.qrKey === 'string' ? body.qrKey : null
     const bgKey = typeof body.bgKey === 'string' ? body.bgKey : null
+    const bankName = typeof body.bankName === 'string' ? body.bankName.trim() : ''
+    const accountNumber = typeof body.accountNumber === 'string' ? body.accountNumber.trim() : ''
     const startDate = String(body.startDate || '')
 
     if (!rate || isNaN(rate) || rate <= 0) {
@@ -56,8 +60,8 @@ export async function onRequestPost({ env, request }: { env: Env; request: Reque
     const prev = await env.DB.prepare('SELECT rate, frequency, qr_key, bg_key, start_date FROM billing_settings WHERE tenant_id = ? ORDER BY updated_at DESC LIMIT 1').bind(tenantId).first()
     const id = crypto.randomUUID()
     const now = new Date().toISOString()
-    await env.DB.prepare('INSERT INTO billing_settings (id, tenant_id, rate, frequency, qr_key, bg_key, start_date, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-      .bind(id, tenantId, rate, frequency, qrKey, bgKey, startDate, now)
+    await env.DB.prepare('INSERT INTO billing_settings (id, tenant_id, rate, frequency, qr_key, bg_key, bank_name, account_number, start_date, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .bind(id, tenantId, rate, frequency, qrKey, bgKey, bankName, accountNumber, startDate, now)
       .run()
 
     const changedBy = getUserFromToken(request)
@@ -80,7 +84,7 @@ export async function onRequestPost({ env, request }: { env: Env; request: Reque
       changedBy ? changedBy.email || changedBy.id : null
     ).run()
 
-    return new Response(JSON.stringify({ id, rate, frequency, qrKey, bgKey, startDate, updatedAt: now }), { headers: { 'content-type': 'application/json' } })
+    return new Response(JSON.stringify({ id, rate, frequency, qrKey, bgKey, bankName, accountNumber, startDate, updatedAt: now }), { headers: { 'content-type': 'application/json' } })
   } catch (e) {
     const msg = (e as any)?.message || 'Failed to update billing settings'
     return new Response(JSON.stringify({ error: msg }), { status: 500, headers: { 'content-type': 'application/json' } })
@@ -103,6 +107,8 @@ async function ensureSettingsTable(db: D1Database) {
   try { await db.prepare('ALTER TABLE billing_settings ADD COLUMN start_date TEXT').run() } catch {}
   try { await db.prepare('ALTER TABLE billing_settings ADD COLUMN qr_key TEXT').run() } catch {}
   try { await db.prepare('ALTER TABLE billing_settings ADD COLUMN bg_key TEXT').run() } catch {}
+  try { await db.prepare('ALTER TABLE billing_settings ADD COLUMN bank_name TEXT').run() } catch {}
+  try { await db.prepare('ALTER TABLE billing_settings ADD COLUMN account_number TEXT').run() } catch {}
 }
 
 async function ensureHistoryTable(db: D1Database) {

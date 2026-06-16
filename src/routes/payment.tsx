@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { CheckCircle2, ArrowLeft } from "lucide-react";
 
 type Resident = { id: string; houseNo: string };
-type Settings = { rate: number; frequency: string; qrKey: string | null; bgKey?: string | null };
+type Settings = { rate: number; frequency: string; qrKey: string | null; bgKey?: string | null; bankName?: string | null; accountNumber?: string | null };
 
 export const Route = createFileRoute("/payment")({
   component: PaymentPage,
@@ -132,6 +132,13 @@ function PaymentPage() {
             {settings && (
               <div className="text-sm text-muted-foreground">
                 Rate: RM {settings.rate} &bull; {settings.frequency}
+              </div>
+            )}
+            {settings?.bankName && settings?.accountNumber && (
+              <div className="w-full space-y-1 border-t pt-3 text-sm">
+                <p className="font-medium text-foreground">Bank Transfer</p>
+                <p className="text-muted-foreground">{settings.bankName}</p>
+                <p className="text-muted-foreground font-mono">{settings.accountNumber}</p>
               </div>
             )}
           </CardContent>

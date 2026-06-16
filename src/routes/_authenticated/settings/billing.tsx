@@ -12,7 +12,7 @@ import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
 import { PageIntro } from "@/components/layout/page-intro";
 
-type Settings = { rate: number; frequency: string; qrKey: string | null; bgKey?: string | null; startDate?: string };
+type Settings = { rate: number; frequency: string; qrKey: string | null; bgKey?: string | null; bankName?: string | null; accountNumber?: string | null; startDate?: string };
 
 export const Route = createFileRoute("/_authenticated/settings/billing")({
   beforeLoad: () => {
@@ -35,11 +35,13 @@ export function BillingSettings() {
   const [rate, setRate] = useState<string>(data?.rate ? String(data.rate) : "");
   const [frequency, setFrequency] = useState<string>(data?.frequency || "monthly");
   const [startDate, setStartDate] = useState<string>(data?.startDate || "");
+  const [bankName, setBankName] = useState<string>(data?.bankName || "");
+  const [accountNumber, setAccountNumber] = useState<string>(data?.accountNumber || "");
   const [file, setFile] = useState<File | null>(null);
   const [bgFile, setBgFile] = useState<File | null>(null);
 
   const { mutateAsync, isPending } = useMutation({
-    mutationFn: async (payload: { rate: number; frequency: string; qrKey: string | null; bgKey: string | null; startDate: string }) => {
+    mutationFn: async (payload: { rate: number; frequency: string; qrKey: string | null; bgKey: string | null; bankName: string; accountNumber: string; startDate: string }) => {
       const res = await fetch("/api/billing/settings", {
         method: "POST",
         headers: { "content-type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
@@ -83,7 +85,7 @@ export function BillingSettings() {
       if (!put.ok) return toast.error("Background upload failed");
       bgKey = key;
     }
-    await mutateAsync({ rate: r, frequency, qrKey, bgKey, startDate });
+    await mutateAsync({ rate: r, frequency, qrKey, bgKey, bankName, accountNumber, startDate });
   }
 
   const qrUrl = data?.qrKey ? `/api/r2/${data.qrKey}` : "";
@@ -94,6 +96,8 @@ export function BillingSettings() {
       setRate(String(data.rate));
       setFrequency(String(data.frequency));
       setStartDate(String(data.startDate || ""));
+      setBankName(data.bankName || "");
+      setAccountNumber(data.accountNumber || "");
     }
   }, [data]);
 
@@ -124,6 +128,14 @@ export function BillingSettings() {
                   <SelectItem value="annual">Annually</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Bank Name</Label>
+              <Input value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="e.g. CIMB Bank" />
+            </div>
+            <div className="space-y-2">
+              <Label>Account Number</Label>
+              <Input value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} placeholder="e.g. 1234-5678-9010" />
             </div>
             <div className="space-y-2">
               <Label>QR Code Image</Label>
