@@ -112,9 +112,14 @@ export function CheckpointDialog({
               <Label htmlFor="latitude">Latitude</Label>
               <Input
                 id="latitude"
-                type="number"
-                step="0.000001"
-                {...form.register("latitude", { valueAsNumber: true })}
+                type="text"
+                inputMode="decimal"
+                {...form.register("latitude", {
+                  setValueAs: (v: string) => {
+                    const n = parseFloat(v);
+                    return isNaN(n) ? undefined : n;
+                  },
+                })}
                 placeholder="Enter latitude (-90 to 90)"
               />
               {form.formState.errors.latitude && (
@@ -127,9 +132,14 @@ export function CheckpointDialog({
               <Label htmlFor="longitude">Longitude</Label>
               <Input
                 id="longitude"
-                type="number"
-                step="0.000001"
-                {...form.register("longitude", { valueAsNumber: true })}
+                type="text"
+                inputMode="decimal"
+                {...form.register("longitude", {
+                  setValueAs: (v: string) => {
+                    const n = parseFloat(v);
+                    return isNaN(n) ? undefined : n;
+                  },
+                })}
                 placeholder="Enter longitude (-180 to 180)"
               />
               {form.formState.errors.longitude && (
