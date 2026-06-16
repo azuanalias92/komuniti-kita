@@ -11,8 +11,10 @@ const wranglerToml = fs.existsSync(path.resolve(__dirname, './wrangler.toml'))
   : ''
 const wranglerVersion =
   wranglerToml.match(/^\s*version\s*=\s*"([^"]+)"/m)?.[1] ?? '0.0.0'
-// CI sets VITE_APP_VERSION from D1; local dev falls back to wrangler.toml
-const appVersion = process.env.VITE_APP_VERSION || wranglerVersion
+// CI sets VITE_APP_VERSION from D1; if D1 step fails (gives "0"), fall back to wrangler.toml
+const appVersion = (process.env.VITE_APP_VERSION && process.env.VITE_APP_VERSION !== '0')
+  ? process.env.VITE_APP_VERSION
+  : wranglerVersion
 
 // https://vite.dev/config/
 export default defineConfig({

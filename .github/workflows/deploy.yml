@@ -34,17 +34,25 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          # Ensure table and default row exist (idempotent on first run)
+          set -e
+          echo "::group::Create app_version table"
           yarn wrangler d1 execute komuniti-kita --remote --command "CREATE TABLE IF NOT EXISTS app_version (id INTEGER PRIMARY KEY DEFAULT 1, version INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL DEFAULT (datetime('now')))"
+          echo "::endgroup::"
+          echo "::group::Seed default row"
           yarn wrangler d1 execute komuniti-kita --remote --command "INSERT OR IGNORE INTO app_version (id, version, updated_at) VALUES (1, 0, datetime('now'))"
-          # Increment version
+          echo "::endgroup::"
+          echo "::group::Increment version"
           yarn wrangler d1 execute komuniti-kita --remote --command "UPDATE app_version SET version = version + 1, updated_at = datetime('now') WHERE id = 1"
-          # Read new version for build (wrangler --json output includes yarn noise, parse carefully)
-          RAW=$(yarn wrangler d1 execute komuniti-kita --remote --command "SELECT version FROM app_version WHERE id = 1" --json 2>/dev/null)
-          VERSION=$(echo "$RAW" | grep -o '"version":[0-9]*' | head -1 | cut -d: -f2)
+          echo "::endgroup::"
+          echo "::group::Read version"
+          RAW=$(yarn wrangler d1 execute komuniti-kita --remote --command "SELECT version FROM app_version WHERE id = 1" --json)
+          echo "$RAW"
+          echo "::endgroup::"
+          # Parse version from mixed yarn+wrangler output
+          VERSION=$(echo "$RAW" | grep -oP '"version"\s*:\s*\K\d+' | tail -1)
           if [ -z "$VERSION" ]; then
-            echo "WARNING: Could not read version from D1, falling back to 0"
-            VERSION=0
+            echo "WARNING: Could not parse version from D1 output, falling back to 1"
+            VERSION=1
           fi
           echo "APP_VERSION=$VERSION" >> $GITHUB_ENV
           echo "Incremented app version to: $VERSION"

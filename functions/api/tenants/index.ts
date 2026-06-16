@@ -1,6 +1,6 @@
 import { getUserFromToken } from '../_lib/auth'
 
-function isSuperAdmin(request: Request) {
+async function isSuperAdmin(env: any, request: Request) {
   const user = await getUserFromToken(env, request)
   return !!user?.role.some((role) => role === 'super_admin' || role === 'superadmin')
 }
@@ -77,7 +77,7 @@ async function ensureSchema(db: any) {
 }
 
 export async function onRequestGet({ request, env }: { request: Request; env: { DB: any } }) {
-  if (!isSuperAdmin(request)) {
+  if (!await isSuperAdmin(env, request)) {
     return new Response(JSON.stringify({ error: 'forbidden' }), {
       status: 403,
       headers: { 'content-type': 'application/json' },
@@ -127,7 +127,7 @@ export async function onRequestGet({ request, env }: { request: Request; env: { 
 }
 
 export async function onRequestPost({ request, env }: { request: Request; env: { DB: any } }) {
-  if (!isSuperAdmin(request)) {
+  if (!await isSuperAdmin(env, request)) {
     return new Response(JSON.stringify({ error: 'forbidden' }), {
       status: 403,
       headers: { 'content-type': 'application/json' },
@@ -193,7 +193,7 @@ export async function onRequestPost({ request, env }: { request: Request; env: {
 }
 
 export async function onRequestPut({ request, env }: { request: Request; env: { DB: any } }) {
-  if (!isSuperAdmin(request)) {
+  if (!await isSuperAdmin(env, request)) {
     return new Response(JSON.stringify({ error: 'forbidden' }), {
       status: 403,
       headers: { 'content-type': 'application/json' },
@@ -294,7 +294,7 @@ export async function onRequestPut({ request, env }: { request: Request; env: { 
 }
 
 export async function onRequestDelete({ request, env }: { request: Request; env: { DB: any } }) {
-  if (!isSuperAdmin(request)) {
+  if (!await isSuperAdmin(env, request)) {
     return new Response(JSON.stringify({ error: 'forbidden' }), {
       status: 403,
       headers: { 'content-type': 'application/json' },
