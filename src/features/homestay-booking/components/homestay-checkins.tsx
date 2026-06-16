@@ -249,7 +249,7 @@ export function HomestayCheckins() {
         />
 
         <Card className="max-sm:has-[div[role='toolbar']]:mb-16">
-          <CardContent className="flex flex-col gap-4 p-6">
+          <CardContent className="flex flex-col gap-4">
             <DataTableToolbar
               table={table}
               searchPlaceholder="Filter by house no, owner, guest, plate, or date..."

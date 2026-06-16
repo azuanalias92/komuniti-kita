@@ -347,7 +347,7 @@ export function Roles() {
         <PageIntro title="Roles" subtitle="Manage roles and access permissions." />
         <div className="flex flex-1 min-h-0 flex-col gap-4">
           <Card>
-            <CardContent className="flex flex-col gap-4 p-6">
+            <CardContent className="flex flex-col gap-4">
               <DataTableToolbar table={rolesTable} searchPlaceholder="Filter roles..." searchKey="name" />
               <div className="overflow-x-auto rounded-md border">
                 <Table>
@@ -397,7 +397,7 @@ export function Roles() {
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-6">
+            <CardContent>
               <div className="w-full lg:w-90">
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onCreateRole)} className="grid gap-3">

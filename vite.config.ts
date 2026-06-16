@@ -27,9 +27,9 @@ export default defineConfig({
       devOptions: { enabled: true },
       includeAssets: ['/images/favicon.svg', '/images/favicon_light.svg'],
       manifest: {
-        name: 'KomunitiKita',
+        name: 'Komuniti Kita',
         short_name: 'Komuniti',
-        description: 'KomunitiKita is a neighbourhood community platform.',
+        description: 'Komuniti Kita is a neighbourhood community platform.',
         theme_color: '#ffffff',
         background_color: '#ffffff',
         display: 'standalone',

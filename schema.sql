@@ -1,4 +1,4 @@
--- KomunitiKita Multi-Tenant Schema
+-- Komuniti Kita Multi-Tenant Schema
 -- Run with: wrangler d1 execute komuniti-kita --remote --file schema.sql
 
 -- ============================================================
@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS tenants (
 
 -- Seed a default tenant for backward compatibility
 INSERT OR IGNORE INTO tenants (id, name, slug, settings, created_at, updated_at)
-VALUES ('default', 'KomunitiKita', 'komuniti-kita', '{}', datetime('now'), datetime('now'));
+VALUES ('default', 'Komuniti Kita', 'komuniti-kita', '{}', datetime('now'), datetime('now'));
 
 -- ============================================================
 -- TENANT INVITES

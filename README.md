@@ -1,4 +1,4 @@
-# KomunitiKita
+# Komuniti Kita
 
 Community management admin dashboard — manage residents, homestay check-ins, geofenced attendance, roles & permissions, and billing. Built on Shadcn UI + Vite, deployed on Cloudflare Pages with D1 and R2.
 

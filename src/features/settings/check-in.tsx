@@ -113,7 +113,7 @@ export function CheckInSettings() {
         <Main className="flex flex-1 flex-col gap-4">
           <PageIntro title="Check-in Configuration" subtitle="Manage geofence radius and check-in interval settings." />
           <Card>
-            <CardContent className="py-6 text-sm text-muted-foreground">
+            <CardContent className="text-sm text-muted-foreground">
               Loading settings...
             </CardContent>
           </Card>
@@ -129,7 +129,7 @@ export function CheckInSettings() {
         <Main className="flex flex-1 flex-col gap-4">
           <PageIntro title="Check-in Configuration" subtitle="Manage geofence radius and check-in interval settings." />
           <Card>
-            <CardContent className="flex flex-col gap-4 py-6">
+            <CardContent className="flex flex-col gap-4">
               <div>
                 <p className="font-medium text-destructive">Unable to load check-in settings</p>
                 <p className="text-sm text-muted-foreground">

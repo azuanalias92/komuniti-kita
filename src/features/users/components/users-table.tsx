@@ -133,7 +133,7 @@ export function UsersTable({ data, search, navigate }: DataTableProps) {
         "flex flex-1 flex-col"
       )}
     >
-      <CardContent className="flex flex-1 flex-col gap-4 p-6">
+      <CardContent className="flex flex-1 flex-col gap-4">
         <DataTableToolbar
           table={table}
           searchPlaceholder="Filter users..."
