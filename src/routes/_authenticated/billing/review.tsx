@@ -172,7 +172,7 @@ function PaymentReview() {
           row.original.receiptKey && !row.original.receiptKey.startsWith("manual/") ? (
             <a
               className="text-primary underline"
-              href={`/api/r2/${row.original.receiptKey}`}
+              href={`/api/r2/${encodeURIComponent(row.original.receiptKey)}`}
               target="_blank"
               rel="noreferrer"
             >

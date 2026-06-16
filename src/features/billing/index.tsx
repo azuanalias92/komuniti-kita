@@ -253,7 +253,7 @@ export function Billing() {
         enableSorting: false,
         cell: ({ row }) =>
           row.original.receiptKey ? (
-            <a className="text-primary underline" href={`/api/r2/${row.original.receiptKey}`} target="_blank" rel="noreferrer">
+            <a className="text-primary underline" href={`/api/r2/${encodeURIComponent(row.original.receiptKey)}`} target="_blank" rel="noreferrer">
               View
             </a>
           ) : (
