@@ -1,15 +1,19 @@
 export async function onRequestGet({ env, params }: { env: { R2: R2Bucket }; params: { key: string } }) {
-  const key = decodeURIComponent(params.key)
-  const object = await env.R2.get(key)
-  if (!object) {
-    return new Response('Not found', { status: 404 })
-  }
-  return new Response(object.body, {
-    headers: {
-      'content-type': object.httpMetadata?.contentType || 'application/octet-stream',
-      'cache-control': 'public, max-age=31536000, immutable'
+  try {
+    const key = decodeURIComponent(params.key)
+    const object = await env.R2.get(key)
+    if (!object) {
+      return new Response('Not found', { status: 404 })
     }
-  })
+    return new Response(object.body, {
+      headers: {
+        'content-type': object.httpMetadata?.contentType || 'application/octet-stream',
+        'cache-control': 'public, max-age=31536000, immutable'
+      }
+    })
+  } catch (e: any) {
+    return new Response(e?.message || 'Internal error', { status: 500 })
+  }
 }
 
 export async function onRequestPut({ env, request, params }: { env: { R2: R2Bucket }; request: Request; params: { key: string } }) {
