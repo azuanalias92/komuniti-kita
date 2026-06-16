@@ -352,7 +352,7 @@ export function UsersActionDialog({
         </div>
         <DialogFooter>
           <Button type='submit' form='user-form'>
-            Save changes
+            Save
           </Button>
         </DialogFooter>
       </DialogContent>

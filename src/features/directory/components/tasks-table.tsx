@@ -268,7 +268,7 @@ export function TasksTable({ data }: DataTableProps) {
           <div className="flex items-center justify-between gap-3">
             <DataTableToolbar
               table={table}
-              searchPlaceholder="Filter by house no, owner name, or vehicle plate..."
+              searchPlaceholder="Filter directory..."
               filters={[
                 {
                   columnId: "houseType",
@@ -283,7 +283,7 @@ export function TasksTable({ data }: DataTableProps) {
                 setDialogOpen(true);
               }}
             >
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="size-4" />
               Add Resident
             </Button>
           </div>

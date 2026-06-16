@@ -24,7 +24,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { DataTablePagination, DataTableToolbar } from "@/components/data-table";
+import { DataTableColumnHeader, DataTablePagination, DataTableToolbar } from "@/components/data-table";
 import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
 import { PageIntro } from "@/components/layout/page-intro";
@@ -153,7 +153,7 @@ export function Tenants() {
     () => [
       {
         accessorKey: "name",
-        header: "Name",
+        header: ({ column }: any) => <DataTableColumnHeader column={column} title="Name" />,
         cell: ({ row }: { row: { original: Tenant } }) => <span className="font-medium">{row.original.name}</span>,
       },
       {
@@ -276,7 +276,7 @@ export function Tenants() {
           <CardContent className="flex flex-1 flex-col gap-4">
             <DataTableToolbar
               table={table}
-              searchPlaceholder="Filter by tenant name or slug..."
+              searchPlaceholder="Filter tenants..."
               actions={
                 isSuperAdmin
                   ? [
@@ -314,7 +314,7 @@ export function Tenants() {
                   ) : (
                     <TableRow>
                       <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
-                        {loading ? "Loading tenants..." : "No tenants found yet."}
+                        {loading ? "Loading..." : "No tenants found."}
                       </TableCell>
                     </TableRow>
                   )}
@@ -367,7 +367,7 @@ export function Tenants() {
                   Cancel
                 </Button>
                 <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? (editingTenant ? "Saving..." : "Creating...") : editingTenant ? "Save Changes" : "Create Tenant"}
+                  {isSubmitting ? (editingTenant ? "Saving..." : "Creating...") : "Save"}
                 </Button>
               </DialogFooter>
             </form>

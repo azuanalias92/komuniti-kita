@@ -248,7 +248,7 @@ export function HomestayCheckinList() {
               size="sm"
               onClick={() => handleEditClick(row.original)}
             >
-              <Pencil className="mr-1 h-4 w-4" />
+              <Pencil className="size-4" />
               Edit
             </Button>
           </div>
@@ -327,7 +327,7 @@ export function HomestayCheckinList() {
           <CardContent className="flex flex-col gap-4">
             <DataTableToolbar
               table={table}
-              searchPlaceholder="Filter by guest, plate, notes, or date..."
+              searchPlaceholder="Filter check-in list..."
             />
             <div className="overflow-x-auto rounded-md border">
                 <Table>

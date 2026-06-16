@@ -102,7 +102,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
             >
               Delete User
               <DropdownMenuShortcut>
-                <Trash2 size={16} />
+                <Trash2 className="size-4" />
               </DropdownMenuShortcut>
             </DropdownMenuItem>
           )}

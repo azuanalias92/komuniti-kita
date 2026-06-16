@@ -205,7 +205,7 @@ export function ResidentDialog({ open, onOpenChange, resident, onSubmit, isLoadi
                   Owners
                 </h4>
                 <Button type="button" variant="outline" size="sm" onClick={handleAddOwner}>
-                  <Plus className="h-4 w-4 mr-1" />
+                  <Plus className="size-4" />
                   Add Owner
                 </Button>
               </div>
@@ -255,7 +255,7 @@ export function ResidentDialog({ open, onOpenChange, resident, onSubmit, isLoadi
                   Vehicles (Optional)
                 </h4>
                 <Button type="button" variant="outline" size="sm" onClick={handleAddVehicle}>
-                  <Plus className="h-4 w-4 mr-1" />
+                  <Plus className="size-4" />
                   Add Vehicle
                 </Button>
               </div>
@@ -292,7 +292,7 @@ export function ResidentDialog({ open, onOpenChange, resident, onSubmit, isLoadi
                 Cancel
               </Button>
               <Button type="submit" disabled={isLoading}>
-                {isLoading ? "Saving..." : resident ? "Update" : "Create"}
+                {isLoading ? "Saving..." : resident ? "Save" : "Add"}
               </Button>
             </DialogFooter>
           </form>

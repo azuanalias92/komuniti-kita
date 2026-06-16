@@ -262,7 +262,7 @@ function CheckInReportPanel() {
   if (isLoading) {
     return (
       <Card className="p-6">
-        <div className="text-center py-8 text-muted-foreground">Loading check-in logs...</div>
+        <div className="text-center py-8 text-muted-foreground">Loading...</div>
       </Card>
     );
   }
@@ -270,7 +270,7 @@ function CheckInReportPanel() {
   if (entries.length === 0) {
     return (
       <Card className="p-6">
-        <div className="text-center py-8 text-muted-foreground">No check-in records found</div>
+        <div className="text-center py-8 text-muted-foreground">No check-in records found.</div>
       </Card>
     );
   }

@@ -156,7 +156,7 @@ export function CheckpointDialog({
               onClick={getCurrentLocation}
               disabled={locating}
             >
-              <Crosshair className="h-4 w-4" />
+              <Crosshair className="size-4" />
               {locating ? "Getting location..." : "Get Current Coordinates"}
             </Button>
           </div>
@@ -170,7 +170,7 @@ export function CheckpointDialog({
               Cancel
             </Button>
             <Button type='submit' disabled={isSubmitting}>
-              {isSubmitting ? 'Saving...' : mode === 'create' ? 'Create' : 'Save'}
+              {isSubmitting ? 'Saving...' : 'Save'}
             </Button>
           </DialogFooter>
         </form>

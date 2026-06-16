@@ -252,7 +252,7 @@ export function HomestayCheckins() {
           <CardContent className="flex flex-col gap-4">
             <DataTableToolbar
               table={table}
-              searchPlaceholder="Filter by house no, owner, guest, plate, or date..."
+              searchPlaceholder="Filter homestays..."
             />
             <div className="overflow-x-auto rounded-md border">
               <Table>

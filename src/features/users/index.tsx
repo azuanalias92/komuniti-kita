@@ -55,7 +55,8 @@ function AddUserButton() {
   const { setOpen } = useUsersContext();
   return (
     <Button className="space-x-1" onClick={() => setOpen("add")}>
-      <span>Add User</span> <UserPlus size={18} />
+      <UserPlus className="size-4" />
+      <span>Add User</span>
     </Button>
   );
 }

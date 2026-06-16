@@ -260,7 +260,7 @@ export function CheckInLogs() {
           <CardContent className="flex flex-1 flex-col gap-4">
             <DataTableToolbar
               table={table}
-              searchPlaceholder="Filter by checkpoint, user, or date..."
+              searchPlaceholder="Filter check-in logs..."
               extraContent={
                 <div className="grid gap-4 md:grid-cols-3">
                   <div className="space-y-2">

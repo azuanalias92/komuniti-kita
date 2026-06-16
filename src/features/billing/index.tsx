@@ -396,12 +396,12 @@ export function Billing() {
             <div className="flex items-center justify-between">
               <CardTitle>House Payments</CardTitle>
               <Button size="sm" onClick={() => setRecordOpen(true)}>
-                <Plus className="mr-1 h-4 w-4" /> Record Payment
+                <Plus className="size-4" /> Record Payment
               </Button>
             </div>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <DataTableToolbar table={summaryTable} searchPlaceholder="Filter by house or status..." />
+            <DataTableToolbar table={summaryTable} searchPlaceholder="Filter billing..." />
             <div className="overflow-x-auto rounded-md border">
               <Table>
                 <TableHeader>
@@ -443,7 +443,7 @@ export function Billing() {
             <CardTitle>Payments Details</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <DataTableToolbar table={paymentsTable} searchPlaceholder="Filter by date, house, or status..." />
+            <DataTableToolbar table={paymentsTable} searchPlaceholder="Filter payments..." />
             <div className="overflow-x-auto rounded-md border">
               <Table>
                 <TableHeader>

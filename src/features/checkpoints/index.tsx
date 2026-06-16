@@ -53,8 +53,8 @@ export function CheckpointsPage() {
           actions={
             canCreate ? (
               <Button onClick={() => setShowCreateDialog(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                New Checkpoint
+                <Plus className="size-4" />
+                Add Checkpoint
               </Button>
             ) : undefined
           }

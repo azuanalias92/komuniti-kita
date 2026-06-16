@@ -96,7 +96,7 @@ export function InviteManagement() {
           </CardDescription>
         </div>
         <Button onClick={() => setShowCreateDialog(true)}>
-          <Plus className="h-4 w-4 mr-2" />
+          <Plus className="size-4" />
           Generate Code
         </Button>
       </CardHeader>

@@ -176,7 +176,7 @@ function GuardRecordTable({
         <CardContent className="flex flex-col gap-4">
           <DataTableToolbar
             table={table}
-            searchPlaceholder="Filter by homestay, person, guest, or plate..."
+            searchPlaceholder="Filter homestay records..."
           />
           <div className="overflow-x-auto rounded-md border">
             <Table>

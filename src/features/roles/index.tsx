@@ -366,7 +366,7 @@ export function Roles() {
                     {rolesLoading ? (
                       <TableRow>
                         <TableCell colSpan={roleColumns.length} className="h-24 text-center">
-                          Loading roles...
+                          Loading...
                         </TableCell>
                       </TableRow>
                     ) : rolesError ? (
@@ -386,7 +386,7 @@ export function Roles() {
                     ) : (
                       <TableRow>
                         <TableCell colSpan={roleColumns.length} className="h-24 text-center">
-                          No roles yet. Create one below.
+                          No roles found.
                         </TableCell>
                       </TableRow>
                     )}
