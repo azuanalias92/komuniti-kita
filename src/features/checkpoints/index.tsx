@@ -12,7 +12,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/stores/auth-store";
 import { useAclStore } from "@/stores/acl-store";
 
-const route = getRouteApi("/_authenticated/checkpoints/");
+const route = getRouteApi("/_authenticated/check-in/checkpoints");
 
 export function CheckpointsPage() {
   const search = route.useSearch();
