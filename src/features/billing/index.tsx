@@ -31,6 +31,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DataTableColumnHeader, DataTablePagination, DataTableToolbar } from "@/components/data-table";
 import { cn } from "@/lib/utils";
+import { apiFetch } from "@/lib/api";
+import { useTenantStore } from "@/stores/tenant-store";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 
@@ -59,6 +61,7 @@ function formatMoney(value: number) {
 }
 
 export function Billing() {
+  const currentTenantId = useTenantStore((s) => s.currentTenantId);
   const [frequency, setFrequency] = useState<string>("monthly");
   const [year, setYear] = useState<string>(String(new Date().getFullYear()));
   const [month, setMonth] = useState<string>(String(new Date().getMonth() + 1));
@@ -84,11 +87,11 @@ export function Billing() {
   const [recordFile, setRecordFile] = useState<File | null>(null);
 
   const { data } = useQuery<{ frequency: string; rate: number; period: { start: string; end: string } | null; data: SummaryRow[] }>({
-    queryKey: ["billing:summary", frequency, year, month],
+    queryKey: ["billing:summary", frequency, year, month, currentTenantId],
     queryFn: async () => {
       const params = new URLSearchParams({ frequency, year });
       if (frequency === "monthly") params.set("month", month);
-      const res = await fetch(`/api/billing/summary?${params.toString()}`);
+      const res = await apiFetch(`/api/billing/summary?${params.toString()}`);
       if (!res.ok) throw new Error("Failed to load summary");
       return await res.json();
     },
@@ -98,9 +101,9 @@ export function Billing() {
   const periodLabel = data?.period ? `${data.period.start} → ${data.period.end}` : "No billing settings yet";
 
   const { data: residents } = useQuery<{ id: string; houseNo: string }[]>({
-    queryKey: ["residents:list-basic"],
+    queryKey: ["residents:list-basic", currentTenantId],
     queryFn: async () => {
-      const res = await fetch("/api/residents?page=1&pageSize=1000");
+      const res = await apiFetch("/api/residents?page=1&pageSize=1000");
       if (res.status === 204) return [];
       const json = await res.json();
       return (json.data || []).map((r: any) => ({ id: r.id, houseNo: r.houseNo }));
@@ -122,8 +125,8 @@ export function Billing() {
 
       let receiptKey = "";
       if (recordFile) {
-        const key = `receipts/${crypto.randomUUID()}-${recordFile.name.replace(/\s+/g, "_")}`;
-        const put = await fetch(`/api/r2/${key}`, {
+        const key = `receipts/${crypto.randomUUID()}-${recordFile.name.replace(/\\s+/g, "_")}`;
+        const put = await apiFetch(`/api/r2/${key}`, {
           method: "PUT",
           headers: { "content-type": recordFile.type || "application/octet-stream" },
           body: recordFile,
@@ -132,7 +135,7 @@ export function Billing() {
         receiptKey = key;
       }
 
-      const res = await fetch("/api/billing/payments", {
+      const res = await apiFetch("/api/billing/payments", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -162,13 +165,13 @@ export function Billing() {
   });
 
   const { data: payments } = useQuery<{ id: string; house_id: string; amount: number; receipt_key: string; payment_date: string; status: string }[]>({
-    queryKey: ["billing:payments", data?.period?.start, data?.period?.end],
+    queryKey: ["billing:payments", data?.period?.start, data?.period?.end, currentTenantId],
     enabled: !!data?.period?.start && !!data?.period?.end,
     queryFn: async () => {
       if (!data?.period) return [];
       const { start, end } = data.period;
       const params = new URLSearchParams({ start, end, status: "confirmed" });
-      const res = await fetch(`/api/billing/payments?${params.toString()}`);
+      const res = await apiFetch(`/api/billing/payments?${params.toString()}`);
       if (!res.ok) throw new Error("Failed to load payments");
       return await res.json();
     },

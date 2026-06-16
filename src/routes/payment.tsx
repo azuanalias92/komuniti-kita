@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { apiFetch } from "@/lib/api";
 import { toast } from "sonner";
 
 type Resident = { id: string; houseNo: string };
@@ -19,7 +20,7 @@ function PaymentPage() {
   const { data: residents } = useQuery<Resident[]>({
     queryKey: ["residents:list"],
     queryFn: async () => {
-      const res = await fetch("/api/residents?page=1&pageSize=1000");
+      const res = await apiFetch("/api/residents?page=1&pageSize=1000");
       if (res.status === 204) return [];
       const json = await res.json();
       return (json.data || []).map((r: any) => ({ id: r.id, houseNo: r.houseNo }));
@@ -28,7 +29,7 @@ function PaymentPage() {
   const { data: settings } = useQuery<Settings | null>({
     queryKey: ["billing:settings"],
     queryFn: async () => {
-      const res = await fetch("/api/billing/settings");
+      const res = await apiFetch("/api/billing/settings");
       if (res.status === 204) return null;
       return await res.json();
     },
@@ -51,11 +52,11 @@ function PaymentPage() {
       if (!amt || isNaN(amt) || amt <= 0) return toast.error("Amount is invalid");
       if (!file) return toast.error("Please upload a receipt");
 
-      const key = `receipts/${crypto.randomUUID()}-${file.name.replace(/\s+/g, "_")}`;
-      const put = await fetch(`/api/r2/${key}`, { method: "PUT", headers: { "content-type": file.type || "application/octet-stream" }, body: file });
+      const key = `receipts/${crypto.randomUUID()}-${file.name.replace(/\\s+/g, "_")}`;
+      const put = await apiFetch(`/api/r2/${key}`, { method: "PUT", headers: { "content-type": file.type || "application/octet-stream" }, body: file });
       if (!put.ok) throw new Error("Failed to upload receipt");
 
-      const post = await fetch("/api/billing/payments", {
+      const post = await apiFetch("/api/billing/payments", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ houseId, amount: amt, receiptKey: key }),
