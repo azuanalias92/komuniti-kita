@@ -185,6 +185,12 @@ export function Dashboard() {
               <TabsContent value="check-in-report" className="space-y-4">
                 <CheckInReportPanel />
               </TabsContent>
+              <TabsContent value="financial-report" className="space-y-4">
+                <FinancialReportPanel />
+              </TabsContent>
+              <TabsContent value="homestay-report" className="space-y-4">
+                <HomestayReportPanel checkinsData={checkinsData || []} />
+              </TabsContent>
             </Tabs>
           </CardContent>
         </Card>
