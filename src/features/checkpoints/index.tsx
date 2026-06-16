@@ -2,12 +2,10 @@ import { useState } from "react";
 import { getRouteApi } from "@tanstack/react-router";
 import { CheckpointsTable } from "@/features/checkpoints/components/checkpoints-table";
 import { CheckpointDialog } from "@/features/checkpoints/components/checkpoint-dialog";
-import { Plus } from "lucide-react";
 import { type CheckpointFormData } from "@/features/checkpoints/data/schema";
 import { Main } from "@/components/layout/main";
 import { PageIntro } from "@/components/layout/page-intro";
 import { Header } from "@/components/layout/header";
-import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/stores/auth-store";
 import { useAclStore } from "@/stores/acl-store";
@@ -50,16 +48,8 @@ export function CheckpointsPage() {
         <PageIntro
           title="Checkpoints"
           subtitle="Manage checkpoint names and locations."
-          actions={
-            canCreate ? (
-              <Button onClick={() => setShowCreateDialog(true)}>
-                <Plus className="size-4" />
-                Add Checkpoint
-              </Button>
-            ) : undefined
-          }
         />
-        <CheckpointsTable search={search} navigate={navigate} />
+        <CheckpointsTable search={search} navigate={navigate} onCreateClick={canCreate ? () => setShowCreateDialog(true) : undefined} />
         <CheckpointDialog open={showCreateDialog} onOpenChange={setShowCreateDialog} onSave={handleCreateCheckpoint} mode="create" />
       </Main>
     </>

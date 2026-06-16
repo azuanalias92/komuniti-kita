@@ -30,9 +30,10 @@ type DataTableProps = {
   data?: Checkpoint[];
   search: Record<string, unknown>;
   navigate: NavigateFn;
+  onCreateClick?: () => void;
 };
 
-export function CheckpointsTable({ data, search, navigate }: DataTableProps) {
+export function CheckpointsTable({ data, search, navigate, onCreateClick }: DataTableProps) {
   // Local UI-only states
   const [rowSelection, setRowSelection] = useState({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -129,7 +130,18 @@ export function CheckpointsTable({ data, search, navigate }: DataTableProps) {
       <CardContent className="flex flex-1 flex-col gap-4">
         {isLoading && <div className="text-muted-foreground">Loading checkpoints...</div>}
         {error && <div className="text-destructive">{(error as Error).message}</div>}
-        <DataTableToolbar table={table} searchPlaceholder="Filter checkpoints..." searchKey="name" filters={[]} />
+        <DataTableToolbar table={table} searchPlaceholder="Filter checkpoints..." searchKey="name" filters={[]}
+          actions={
+            onCreateClick
+              ? [
+                  {
+                    label: "Add Checkpoint",
+                    onClick: onCreateClick,
+                  },
+                ]
+              : []
+          }
+        />
         <div className="overflow-x-auto rounded-md border">
           <Table>
             <TableHeader>

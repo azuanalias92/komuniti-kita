@@ -33,7 +33,8 @@ export function UsersTable({ data, search, navigate }: DataTableProps) {
   // Fallback to API users if no data is provided
   const { can } = useAclStore();
   const canDelete = can("/users", "delete");
-  const { roleOptions } = useUsersContext();
+  const canCreate = can("/users", "create");
+  const { roleOptions, setOpen } = useUsersContext();
 
   // Local UI-only states
   const [rowSelection, setRowSelection] = useState({});
@@ -155,6 +156,16 @@ export function UsersTable({ data, search, navigate }: DataTableProps) {
               options: roleOptions,
             },
           ]}
+          actions={
+            canCreate
+              ? [
+                  {
+                    label: "Add User",
+                    onClick: () => setOpen("add"),
+                  },
+                ]
+              : []
+          }
         />
         <div className="overflow-x-auto rounded-md border">
           <Table>

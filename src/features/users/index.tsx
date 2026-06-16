@@ -11,18 +11,12 @@ import { UsersProvider } from "./components/users-provider";
 import { UsersTable } from "./components/users-table";
 import { InviteManagement } from "./components/invite-management";
 import { ApprovalManagement } from "./components/approval-management";
-import { Button } from "@/components/ui/button";
-import { UserPlus } from "lucide-react";
-import { useUsersContext } from "./components/users-provider";
-import { useAclStore } from "@/stores/acl-store";
 
 const route = getRouteApi("/_authenticated/auth/users");
 
 export function Users() {
   const search = route.useSearch();
   const navigate = route.useNavigate();
-  const { can } = useAclStore();
-  const canCreate = can("/users", "create");
 
   return (
     <UsersProvider>
@@ -39,7 +33,6 @@ export function Users() {
         <PageIntro
           title="Users"
           subtitle="Manage users, roles, approvals, and invite codes."
-          actions={canCreate ? <AddUserButton /> : undefined}
         />
         <UsersTable search={search} navigate={navigate} />
         <ApprovalManagement />
@@ -51,12 +44,3 @@ export function Users() {
   );
 }
 
-function AddUserButton() {
-  const { setOpen } = useUsersContext();
-  return (
-    <Button className="space-x-1" onClick={() => setOpen("add")}>
-      <UserPlus className="size-4" />
-      <span>Add User</span>
-    </Button>
-  );
-}
