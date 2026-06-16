@@ -6,6 +6,7 @@ import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
 import { PageIntro } from "@/components/layout/page-intro";
 import { Overview } from "./components/overview";
+import { Analytics } from "./components/analytics";
 import { RecentCheckins } from "./components/recent-checkins";
 import { Users, CheckCircle, Car, UserCheck } from "lucide-react";
 import { useAuthStore } from "@/stores/auth-store";
@@ -113,6 +114,7 @@ export function Dashboard() {
                 <TabsList>
                   <TabsTrigger value="overview">Overview</TabsTrigger>
                   <TabsTrigger value="check-in-report">Check-in Report</TabsTrigger>
+                  <TabsTrigger value="analytics">Analytics</TabsTrigger>
                 </TabsList>
               </div>
               <TabsContent value="overview" className="space-y-4">
@@ -181,6 +183,9 @@ export function Dashboard() {
               </TabsContent>
               <TabsContent value="check-in-report" className="space-y-4">
                 <CheckInReportPanel />
+              </TabsContent>
+              <TabsContent value="analytics" className="space-y-4">
+                <Analytics />
               </TabsContent>
             </Tabs>
           </CardContent>
