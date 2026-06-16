@@ -16,7 +16,7 @@ import { UserPlus } from "lucide-react";
 import { useUsersContext } from "./components/users-provider";
 import { useAclStore } from "@/stores/acl-store";
 
-const route = getRouteApi("/_authenticated/users/");
+const route = getRouteApi("/_authenticated/auth/users");
 
 export function Users() {
   const search = route.useSearch();
