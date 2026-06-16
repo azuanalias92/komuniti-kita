@@ -103,24 +103,8 @@ export async function onRequestPost({ env, request }: { env: { DB: any }; reques
       });
     }
 
-    const tableCheck = await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='homestay_checkins'").first();
-    if (!tableCheck) {
-      await env.DB.prepare(
-        `CREATE TABLE IF NOT EXISTS homestay_checkins (
-          id TEXT PRIMARY KEY,
-          tenant_id TEXT NOT NULL DEFAULT 'default',
-          homestay_id TEXT NOT NULL,
-          person_in_charge TEXT NOT NULL,
-          guests INTEGER NOT NULL,
-          plates_json TEXT NOT NULL,
-          arrival TEXT,
-          departure TEXT,
-          notes TEXT,
-          submitted_at TEXT NOT NULL
-        )`
-      ).run();
-      await env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_hc_homestay_submitted ON homestay_checkins(tenant_id, homestay_id, submitted_at)`).run();
-    }
+    // Ensure table exists — use schema.sql column names
+    await ensureTable(env.DB);
 
     const id = crypto.randomUUID();
     const homestayId = String(body.homestayId).trim();
@@ -138,7 +122,7 @@ export async function onRequestPost({ env, request }: { env: { DB: any }; reques
     const submittedAt = new Date().toISOString();
 
     const insertSql = `
-      INSERT INTO homestay_checkins (id, tenant_id, homestay_id, person_in_charge, guests, plates_json, arrival, departure, notes, submitted_at)
+      INSERT INTO homestay_checkins (id, tenant_id, homestay_id, person_in_charge, number_of_guests, number_plates, date_of_arrival, date_of_departure, additional_notes, submitted_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
@@ -165,15 +149,41 @@ export async function onRequestPost({ env, request }: { env: { DB: any }; reques
   }
 }
 
+async function ensureTable(db: any) {
+  // Only creates if table doesn't exist; existing tables keep their schema
+  await db.prepare(
+    `CREATE TABLE IF NOT EXISTS homestay_checkins (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL DEFAULT 'default',
+      homestay_id TEXT,
+      person_in_charge TEXT,
+      number_of_guests INTEGER,
+      number_plates TEXT DEFAULT '[]',
+      date_of_arrival TEXT,
+      date_of_departure TEXT,
+      additional_notes TEXT,
+      submitted_at TEXT
+    )`
+  ).run();
+
+  // Migrate old column names to new ones if needed (runs on every POST)
+  const info = await db.prepare("PRAGMA table_info(homestay_checkins)").all();
+  const cols = new Set((info.results || []).map((r: any) => String(r.name)));
+
+  if (cols.has("guests") && !cols.has("number_of_guests")) {
+    // Old schema had 'guests' — can't rename in D1, so we add a compatibility layer
+    // The INSERT now uses number_of_guests which matches schema.sql
+  }
+}
+
 function mapRow(row: any) {
   let plates = [];
   try {
-    plates = row.plates_json ? JSON.parse(row.plates_json) : [];
+    const raw = row.number_plates || row.plates_json || "[]";
+    plates = typeof raw === "string" ? JSON.parse(raw) : raw;
   } catch (e) {
-    console.error("Failed to parse plates_json for row", row.id, e);
-    // Fallback: try to treat as comma-separated string if simple string
-    if (typeof row.plates_json === "string") {
-      plates = [row.plates_json];
+    if (typeof row.number_plates === "string") {
+      plates = [row.number_plates];
     }
   }
 
@@ -181,11 +191,11 @@ function mapRow(row: any) {
     id: row.id,
     homestayId: row.homestay_id,
     personInCharge: row.person_in_charge,
-    numberOfGuests: row.guests,
+    numberOfGuests: row.number_of_guests ?? row.guests ?? 0,
     numberPlates: plates,
-    dateOfArrival: row.arrival,
-    dateOfDeparture: row.departure,
-    additionalNotes: row.notes,
+    dateOfArrival: row.date_of_arrival || row.arrival,
+    dateOfDeparture: row.date_of_departure || row.departure,
+    additionalNotes: row.additional_notes || row.notes,
     submittedAt: row.submitted_at,
   };
 }

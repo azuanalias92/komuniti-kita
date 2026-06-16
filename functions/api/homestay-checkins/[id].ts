@@ -34,7 +34,7 @@ export async function onRequestPut({ env, request, params }: { env: { DB: D1Data
 
     const updateSql = `
       UPDATE homestay_checkins
-      SET person_in_charge = ?, guests = ?, plates_json = ?, arrival = ?, departure = ?, notes = ?
+      SET person_in_charge = ?, number_of_guests = ?, number_plates = ?, date_of_arrival = ?, date_of_departure = ?, additional_notes = ?
       WHERE id = ? AND tenant_id = ?
     `;
 
