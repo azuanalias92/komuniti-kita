@@ -50,7 +50,6 @@ export const Route = createFileRoute("/_authenticated/billing/review")({
 
 const STATUS_COLORS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   confirmed: "default",
-  submitted: "secondary",
   pending: "secondary",
   rejected: "destructive",
 };
@@ -93,7 +92,7 @@ function PaymentReview() {
   });
 
   const { mutateAsync: updateStatus } = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: "submitted" | "confirmed" | "rejected" }) => {
+    mutationFn: async ({ id, status }: { id: string; status: "pending" | "confirmed" | "rejected" }) => {
       const res = await fetch("/api/billing/payments", {
         method: "PUT",
         headers: { "content-type": "application/json", Authorization: `Bearer ${token}` },
@@ -109,7 +108,7 @@ function PaymentReview() {
     onError: (e: any) => toast.error(e.message || "Update failed"),
   });
 
-  async function handleStatusChange(id: string, status: "submitted" | "confirmed" | "rejected") {
+  async function handleStatusChange(id: string, status: "pending" | "confirmed" | "rejected") {
     await updateStatus({ id, status });
     await refetch();
   }
@@ -193,12 +192,12 @@ function PaymentReview() {
           return (
             <div className="space-x-1 text-right">
               <Button
-                variant={status === "submitted" ? "default" : "outline"}
+                variant={status === "pending" ? "default" : "outline"}
                 size="sm"
                 disabled={isFetching}
-                onClick={() => handleStatusChange(row.original.id, "submitted")}
+                onClick={() => handleStatusChange(row.original.id, "pending")}
               >
-                Submitted
+                Pending
               </Button>
               <Button
                 variant={status === "confirmed" ? "default" : "outline"}
@@ -288,7 +287,7 @@ function PaymentReview() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="submitted">Submitted</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="confirmed">Confirmed</SelectItem>
                     <SelectItem value="rejected">Rejected</SelectItem>
                   </SelectContent>

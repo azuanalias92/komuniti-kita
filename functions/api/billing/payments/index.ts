@@ -44,7 +44,7 @@ export async function onRequestPost({ env, request }: { env: { DB: any }; reques
     const now = new Date().toISOString()
     const finalReceiptKey = receiptKey || `manual/${id}`
     // Admin-recorded payments are auto-confirmed; resident submissions are pending
-    const initialStatus = isAdmin ? 'confirmed' : 'submitted'
+    const initialStatus = isAdmin ? 'confirmed' : 'pending'
     await env.DB.prepare('INSERT INTO payments (id, tenant_id, house_id, amount, receipt_key, payment_date, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
       .bind(id, tenantId, houseId, amount, finalReceiptKey, paymentDate, initialStatus, now, now)
       .run()
@@ -65,7 +65,7 @@ export async function onRequestPut({ env, request }: { env: { DB: any }; request
     const body = await request.json().catch(() => ({} as any))
     const id = String(body.id || '')
     const status = String(body.status || '')
-    if (!id || !['pending','submitted','confirmed','rejected'].includes(status)) {
+    if (!id || !['pending','confirmed','rejected'].includes(status)) {
       return new Response(JSON.stringify({ error: 'invalid payload' }), { status: 400, headers: { 'content-type': 'application/json' } })
     }
     await env.DB.prepare('UPDATE payments SET status = ?, updated_at = ?, reviewed_at = ? WHERE id = ? AND tenant_id = ?').bind(status, new Date().toISOString(), new Date().toISOString(), id, tenantId).run()

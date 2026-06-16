@@ -61,7 +61,7 @@ function PaymentPage() {
       const put = await apiFetch(`/api/r2/${key}`, { method: "PUT", headers: { "content-type": file.type || "application/octet-stream" }, body: file });
       if (!put.ok) throw new Error("Failed to upload receipt");
 
-      const post = await apiFetch("/api/billing/payments", {
+      const post = await fetch("/api/billing/payments", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ houseId, amount: amt, receiptKey: key }),
