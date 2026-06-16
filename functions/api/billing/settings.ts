@@ -9,6 +9,7 @@ export async function onRequestGet({ env, request }: { env: Env; request: Reques
     await ensureSettingsTable(env.DB)
     const tenantId = getTenantId(request);
     const row = await env.DB.prepare('SELECT id, rate, frequency, qr_key, bg_key, bank_name, account_number, start_date, updated_at FROM billing_settings WHERE tenant_id = ? ORDER BY updated_at DESC LIMIT 1').bind(tenantId).first()
+    const tenant = await env.DB.prepare('SELECT name FROM tenants WHERE id = ?').bind(tenantId).first() as { name?: string } | null
     if (!row) return new Response(null, { status: 204 })
     return new Response(JSON.stringify({
       id: row.id,
@@ -19,7 +20,8 @@ export async function onRequestGet({ env, request }: { env: Env; request: Reques
       bankName: row.bank_name ? String(row.bank_name) : null,
       accountNumber: row.account_number ? String(row.account_number) : null,
       startDate: String(row.start_date || ''),
-      updatedAt: String(row.updated_at || '')
+      updatedAt: String(row.updated_at || ''),
+      tenantName: tenant?.name || null
     }), { headers: { 'content-type': 'application/json' } })
   } catch (e) {
     return new Response(JSON.stringify({ error: 'Failed to fetch billing settings' }), { status: 500, headers: { 'content-type': 'application/json' } })

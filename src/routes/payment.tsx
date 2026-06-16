@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { CheckCircle2, ArrowLeft } from "lucide-react";
 
 type Resident = { id: string; houseNo: string };
-type Settings = { rate: number; frequency: string; qrKey: string | null; bgKey?: string | null; bankName?: string | null; accountNumber?: string | null };
+type Settings = { rate: number; frequency: string; qrKey: string | null; bgKey?: string | null; bankName?: string | null; accountNumber?: string | null; tenantName?: string | null };
 
 export const Route = createFileRoute("/payment")({
   component: PaymentPage,
@@ -121,7 +121,7 @@ function PaymentPage() {
       <div className="min-h-screen flex flex-col sm:flex-row items-center justify-center gap-8 px-4">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle>Payment For Komuniti Kita</CardTitle>
+            <CardTitle>Payment For {settings?.tenantName || "Komuniti Kita"}</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col items-center gap-4">
             {qrUrl ? (
