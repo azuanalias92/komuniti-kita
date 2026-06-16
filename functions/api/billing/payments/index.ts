@@ -91,4 +91,6 @@ async function ensurePaymentsTable(db: any) {
     )
   `).run()
   try { await db.prepare('ALTER TABLE payments ADD COLUMN reviewed_at TEXT').run() } catch {}
+  try { await db.prepare('ALTER TABLE payments ADD COLUMN created_at TEXT').run() } catch {}
+  try { await db.prepare('ALTER TABLE payments ADD COLUMN updated_at TEXT').run() } catch {}
 }
