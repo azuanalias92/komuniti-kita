@@ -15,7 +15,7 @@ import {
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Pencil } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -62,6 +62,9 @@ export function Tenants() {
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingTenant, setDeletingTenant] = useState<Tenant | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [globalFilter, setGlobalFilter] = useState("");
@@ -120,6 +123,31 @@ export function Tenants() {
     setOpen(true);
   }
 
+  function handleDeleteOpen(tenant: Tenant) {
+    setDeletingTenant(tenant);
+    setDeleteDialogOpen(true);
+  }
+
+  async function handleDelete() {
+    if (!deletingTenant) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/tenants?id=${deletingTenant.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error || "Failed to delete tenant");
+      }
+      setTenants((current) => current.filter((t) => t.id !== deletingTenant.id));
+      toast.success(`Tenant "${deletingTenant.name}" deleted`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to delete tenant");
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setDeletingTenant(null);
+    }
+  }
+
   const columns = useMemo(
     () => [
       {
@@ -156,10 +184,13 @@ export function Tenants() {
               enableSorting: false,
               enableHiding: false,
               cell: ({ row }: { row: { original: Tenant } }) => (
-                <div className="text-right">
+                <div className="text-right flex items-center justify-end gap-2">
                   <Button variant="outline" size="sm" onClick={() => handleEditOpen(row.original)}>
-                    <Pencil className="mr-2 size-4" />
+                    <Pencil className="size-4" />
                     Edit
+                  </Button>
+                  <Button variant="destructive" size="sm" onClick={() => handleDeleteOpen(row.original)}>
+                    <Trash2 className="size-4" />
                   </Button>
                 </div>
               ),
@@ -340,6 +371,28 @@ export function Tenants() {
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-destructive">Delete Tenant</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete <strong>{deletingTenant?.name}</strong>?
+              <br />
+              This will permanently remove all users, checkpoints, check-ins, residents, payments, billing settings, and other data associated with this tenant. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="button" variant="destructive" disabled={isDeleting} onClick={handleDelete}>
+              {isDeleting ? "Deleting..." : "Delete Tenant"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

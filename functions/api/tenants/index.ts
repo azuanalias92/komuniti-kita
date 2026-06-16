@@ -292,3 +292,56 @@ export async function onRequestPut({ request, env }: { request: Request; env: { 
     }
   )
 }
+
+export async function onRequestDelete({ request, env }: { request: Request; env: { DB: any } }) {
+  if (!isSuperAdmin(request)) {
+    return new Response(JSON.stringify({ error: 'forbidden' }), {
+      status: 403,
+      headers: { 'content-type': 'application/json' },
+    })
+  }
+
+  const url = new URL(request.url)
+  const id = url.searchParams.get('id')
+
+  if (!id) {
+    return new Response(JSON.stringify({ error: 'missing_id' }), {
+      status: 400,
+      headers: { 'content-type': 'application/json' },
+    })
+  }
+
+  if (id === 'default') {
+    return new Response(JSON.stringify({ error: 'cannot_delete_default_tenant' }), {
+      status: 400,
+      headers: { 'content-type': 'application/json' },
+    })
+  }
+
+  const existing = await env.DB.prepare('SELECT id, name FROM tenants WHERE id = ? LIMIT 1').bind(id).first()
+  if (!existing) {
+    return new Response(JSON.stringify({ error: 'tenant_not_found' }), {
+      status: 404,
+      headers: { 'content-type': 'application/json' },
+    })
+  }
+
+  await env.DB.exec(`
+    DELETE FROM tenant_invites WHERE tenant_id = '${id}';
+    DELETE FROM pending_approvals WHERE tenant_id = '${id}';
+    DELETE FROM users WHERE tenant_id = '${id}';
+    DELETE FROM roles WHERE tenant_id = '${id}';
+    DELETE FROM role_permissions WHERE tenant_id = '${id}';
+    DELETE FROM checkpoints WHERE tenant_id = '${id}';
+    DELETE FROM check_in_logs WHERE tenant_id = '${id}';
+    DELETE FROM residents WHERE tenant_id = '${id}';
+    DELETE FROM homestay_checkins WHERE tenant_id = '${id}';
+    DELETE FROM payments WHERE tenant_id = '${id}';
+    DELETE FROM billing_settings WHERE tenant_id = '${id}';
+    DELETE FROM billing_settings_history WHERE tenant_id = '${id}';
+    DELETE FROM billing_summary WHERE tenant_id = '${id}';
+    DELETE FROM tenants WHERE id = '${id}';
+  `)
+
+  return new Response(null, { status: 204 })
+}
