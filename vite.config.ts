@@ -6,14 +6,18 @@ import tailwindcss from '@tailwindcss/vite'
 import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
-const wranglerToml = fs.readFileSync(path.resolve(__dirname, './wrangler.toml'), 'utf8')
+const wranglerToml = fs.existsSync(path.resolve(__dirname, './wrangler.toml'))
+  ? fs.readFileSync(path.resolve(__dirname, './wrangler.toml'), 'utf8')
+  : ''
 const wranglerVersion =
   wranglerToml.match(/^\s*version\s*=\s*"([^"]+)"/m)?.[1] ?? '0.0.0'
+// CI sets VITE_APP_VERSION from D1; local dev falls back to wrangler.toml
+const appVersion = process.env.VITE_APP_VERSION || wranglerVersion
 
 // https://vite.dev/config/
 export default defineConfig({
   define: {
-    __APP_VERSION__: JSON.stringify(wranglerVersion),
+    __APP_VERSION__: JSON.stringify(appVersion),
   },
   plugins: [
     tanstackRouter({

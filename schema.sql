@@ -149,6 +149,16 @@ CREATE TABLE IF NOT EXISTS residents (
 );
 
 -- ============================================================
+-- APP VERSION (auto-incremented on each CI deploy)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS app_version (
+  id INTEGER PRIMARY KEY DEFAULT 1,
+  version INTEGER NOT NULL DEFAULT 0,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+INSERT OR IGNORE INTO app_version (id, version, updated_at) VALUES (1, 0, datetime('now'));
+
+-- ============================================================
 -- HOMESTAY CHECK-INS (per-tenant)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS homestay_checkins (
