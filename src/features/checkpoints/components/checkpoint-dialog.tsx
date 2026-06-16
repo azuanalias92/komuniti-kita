@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Crosshair } from 'lucide-react'
 import { type Checkpoint, type CheckpointFormData, checkpointFormSchema } from '../data/schema'
 
 interface CheckpointDialogProps {
@@ -30,6 +31,7 @@ export function CheckpointDialog({
   mode,
 }: CheckpointDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [locating, setLocating] = useState(false)
 
   const form = useForm<CheckpointFormData>({
     resolver: zodResolver(checkpointFormSchema),
@@ -45,6 +47,24 @@ export function CheckpointDialog({
           longitude: 0,
         },
   })
+
+  const getCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      return
+    }
+    setLocating(true)
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        form.setValue('latitude', position.coords.latitude)
+        form.setValue('longitude', position.coords.longitude)
+        setLocating(false)
+      },
+      () => {
+        setLocating(false)
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    )
+  }
 
   const handleSubmit = async (data: CheckpointFormData) => {
     setIsSubmitting(true)
@@ -88,36 +108,47 @@ export function CheckpointDialog({
                 </p>
               )}
             </div>
-            <div className='grid gap-2'>
-              <Label htmlFor='latitude'>Latitude</Label>
+            <div className="grid gap-2">
+              <Label htmlFor="latitude">Latitude</Label>
               <Input
-                id='latitude'
-                type='number'
-                step='0.000001'
-                {...form.register('latitude', { valueAsNumber: true })}
-                placeholder='Enter latitude (-90 to 90)'
+                id="latitude"
+                type="number"
+                step="0.000001"
+                {...form.register("latitude", { valueAsNumber: true })}
+                placeholder="Enter latitude (-90 to 90)"
               />
               {form.formState.errors.latitude && (
-                <p className='text-sm text-destructive'>
+                <p className="text-sm text-destructive">
                   {form.formState.errors.latitude.message}
                 </p>
               )}
             </div>
-            <div className='grid gap-2'>
-              <Label htmlFor='longitude'>Longitude</Label>
+            <div className="grid gap-2">
+              <Label htmlFor="longitude">Longitude</Label>
               <Input
-                id='longitude'
-                type='number'
-                step='0.000001'
-                {...form.register('longitude', { valueAsNumber: true })}
-                placeholder='Enter longitude (-180 to 180)'
+                id="longitude"
+                type="number"
+                step="0.000001"
+                {...form.register("longitude", { valueAsNumber: true })}
+                placeholder="Enter longitude (-180 to 180)"
               />
               {form.formState.errors.longitude && (
-                <p className='text-sm text-destructive'>
+                <p className="text-sm text-destructive">
                   {form.formState.errors.longitude.message}
                 </p>
               )}
             </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full gap-2"
+              onClick={getCurrentLocation}
+              disabled={locating}
+            >
+              <Crosshair className="h-4 w-4" />
+              {locating ? "Getting location..." : "Get Current Coordinates"}
+            </Button>
           </div>
           <DialogFooter>
             <Button
