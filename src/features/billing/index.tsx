@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   flexRender,
   getCoreRowModel,
@@ -27,8 +27,12 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DataTableColumnHeader, DataTablePagination, DataTableToolbar } from "@/components/data-table";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { Plus } from "lucide-react";
 
 type SummaryRow = {
   houseId: string;
@@ -72,6 +76,12 @@ export function Billing() {
     pageIndex: 0,
     pageSize: 10,
   });
+  const qc = useQueryClient();
+  const [recordOpen, setRecordOpen] = useState(false);
+  const [recordHouse, setRecordHouse] = useState("");
+  const [recordAmount, setRecordAmount] = useState("");
+  const [recordDate, setRecordDate] = useState(new Date().toISOString().slice(0, 10));
+  const [recordFile, setRecordFile] = useState<File | null>(null);
 
   const { data } = useQuery<{ frequency: string; rate: number; period: { start: string; end: string } | null; data: SummaryRow[] }>({
     queryKey: ["billing:summary", frequency, year, month],
@@ -102,6 +112,54 @@ export function Billing() {
     for (const r of residents || []) m.set(r.id, r.houseNo);
     return m;
   }, [residents]);
+
+  const { mutateAsync: recordPayment, isPending: isRecording } = useMutation({
+    mutationFn: async () => {
+      const amt = Number(recordAmount);
+      if (!recordHouse) throw new Error("Please select a house");
+      if (!amt || isNaN(amt) || amt <= 0) throw new Error("Invalid amount");
+      if (!recordDate) throw new Error("Payment date is required");
+
+      let receiptKey = "";
+      if (recordFile) {
+        const key = `receipts/${crypto.randomUUID()}-${recordFile.name.replace(/\s+/g, "_")}`;
+        const put = await fetch(`/api/r2/${key}`, {
+          method: "PUT",
+          headers: { "content-type": recordFile.type || "application/octet-stream" },
+          body: recordFile,
+        });
+        if (!put.ok) throw new Error("Failed to upload receipt");
+        receiptKey = key;
+      }
+
+      const res = await fetch("/api/billing/payments", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          houseId: recordHouse,
+          amount: amt,
+          receiptKey,
+          paymentDate: recordDate,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Failed" }));
+        throw new Error(err.error || "Failed to record payment");
+      }
+      return await res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["billing:summary"] });
+      qc.invalidateQueries({ queryKey: ["billing:payments"] });
+      toast.success("Payment recorded");
+      setRecordOpen(false);
+      setRecordHouse("");
+      setRecordAmount("");
+      setRecordDate(new Date().toISOString().slice(0, 10));
+      setRecordFile(null);
+    },
+    onError: (e: any) => toast.error(e.message || "Failed to record payment"),
+  });
 
   const { data: payments } = useQuery<{ id: string; house_id: string; amount: number; receipt_key: string; payment_date: string; status: string }[]>({
     queryKey: ["billing:payments", data?.period?.start, data?.period?.end],
@@ -332,7 +390,12 @@ export function Billing() {
 
         <Card>
           <CardHeader>
-            <CardTitle>House Payments</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>House Payments</CardTitle>
+              <Button size="sm" onClick={() => setRecordOpen(true)}>
+                <Plus className="mr-1 h-4 w-4" /> Record Payment
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <DataTableToolbar table={summaryTable} searchPlaceholder="Filter by house or status..." />
@@ -414,6 +477,64 @@ export function Billing() {
           </CardContent>
         </Card>
       </Main>
+
+      <Dialog open={recordOpen} onOpenChange={setRecordOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Record Payment</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>House</Label>
+              <Select value={recordHouse} onValueChange={setRecordHouse}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select house" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(residents || []).map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.houseNo}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Amount (RM)</Label>
+              <Input
+                type="number"
+                min={0}
+                step={0.01}
+                value={recordAmount}
+                onChange={(e) => setRecordAmount(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Payment Date</Label>
+              <Input
+                type="date"
+                value={recordDate}
+                onChange={(e) => setRecordDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Receipt (optional)</Label>
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setRecordFile(e.target.files?.[0] || null)}
+              />
+            </div>
+            <Button
+              className="w-full"
+              disabled={isRecording}
+              onClick={() => recordPayment()}
+            >
+              {isRecording ? "Recording..." : "Record Payment"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
