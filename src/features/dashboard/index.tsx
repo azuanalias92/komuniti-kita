@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-// import { Button } from ":/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Header } from "@/components/layout/header";
@@ -8,21 +7,19 @@ import { PageIntro } from "@/components/layout/page-intro";
 import { Overview } from "./components/overview";
 import { RecentCheckins } from "./components/recent-checkins";
 import { Users, CheckCircle, Car, UserCheck } from "lucide-react";
-import { useAuthStore } from "@/stores/auth-store";
+import { useTenantStore } from "@/stores/tenant-store";
+import { apiFetch } from "@/lib/api";
 import { parseISO, startOfDay, endOfDay, subDays, format } from "date-fns";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
 import { cn } from "@/lib/utils";
 
 export function Dashboard() {
-  // Removed unused queries to avoid unnecessary API calls and potential 204 handling issues
+  const currentTenantId = useTenantStore((s) => s.currentTenantId);
 
   const { data: residentsData } = useQuery({
-    queryKey: ["dashboard-residents"],
+    queryKey: ["dashboard-residents", currentTenantId],
     queryFn: async () => {
-      const token = useAuthStore.getState().auth.accessToken;
-      const res = await fetch("/api/residents", {
-        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      });
+      const res = await apiFetch("/api/residents");
       if (res.status === 204) return [];
       if (!res.ok) return [];
       const json = await res.json();
@@ -31,12 +28,9 @@ export function Dashboard() {
   });
 
   const { data: residentsTotal } = useQuery({
-    queryKey: ["dashboard-residents-total"],
+    queryKey: ["dashboard-residents-total", currentTenantId],
     queryFn: async () => {
-      const token = useAuthStore.getState().auth.accessToken;
-      const res = await fetch("/api/residents?page=1&pageSize=1", {
-        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      });
+      const res = await apiFetch("/api/residents?page=1&pageSize=1");
       if (res.status === 204) return 0;
       if (!res.ok) return 0;
       const json = await res.json();
@@ -45,12 +39,9 @@ export function Dashboard() {
   });
 
   const { data: checkinsData } = useQuery({
-    queryKey: ["dashboard-homestay-checkins"],
+    queryKey: ["dashboard-homestay-checkins", currentTenantId],
     queryFn: async () => {
-      const token = useAuthStore.getState().auth.accessToken;
-      const res = await fetch("/api/homestay-checkins", {
-        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      });
+      const res = await apiFetch("/api/homestay-checkins");
       if (!res.ok) return [];
       const json = res.status === 204 ? { data: [] } : await res.json();
       return json.data || [];
@@ -199,6 +190,8 @@ export function Dashboard() {
 }
 
 function CheckInReportPanel() {
+  const currentTenantId = useTenantStore((s) => s.currentTenantId);
+
   type LogItem = {
     id: string;
     checkpointId: string;
@@ -210,12 +203,9 @@ function CheckInReportPanel() {
   };
 
   const { data: checkIns = [], isLoading } = useQuery({
-    queryKey: ["dashboard-check-in-logs"],
+    queryKey: ["dashboard-check-in-logs", currentTenantId],
     queryFn: async () => {
-      const token = useAuthStore.getState().auth.accessToken;
-      const res = await fetch("/api/check-in", {
-        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      });
+      const res = await apiFetch("/api/check-in");
       if (!res.ok) return [];
       const json = res.status === 204 ? [] : await res.json();
       return (json as any[]).map((item) => ({
@@ -231,12 +221,9 @@ function CheckInReportPanel() {
   });
 
   const { data: checkpoints = [] } = useQuery({
-    queryKey: ["dashboard-checkpoints-names"],
+    queryKey: ["dashboard-checkpoints-names", currentTenantId],
     queryFn: async () => {
-      const token = useAuthStore.getState().auth.accessToken;
-      const res = await fetch("/api/checkpoints?pageSize=100", {
-        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      });
+      const res = await apiFetch("/api/checkpoints?pageSize=100");
       if (!res.ok) return [];
       const json = res.status === 204 ? { data: [] } : await res.json();
       return json.data || [];
@@ -245,13 +232,10 @@ function CheckInReportPanel() {
 
   // Users lookup for "check-in by who" — must be before any early returns
   const { data: users = [] } = useQuery({
-    queryKey: ["dashboard-users-for-check-in"],
+    queryKey: ["dashboard-users-for-check-in", currentTenantId],
     queryFn: async () => {
-      const token = useAuthStore.getState().auth.accessToken;
       try {
-        const res = await fetch("/api/users?pageSize=200", {
-          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        });
+        const res = await apiFetch("/api/users?pageSize=200");
         if (!res.ok) return [];
         const json = res.status === 204 ? { data: [] } : await res.json();
         return json.data || [];
@@ -449,6 +433,7 @@ function CheckInReportPanel() {
 }
 
 function FinancialReportPanel() {
+  const currentTenantId = useTenantStore((s) => s.currentTenantId);
   const year = String(new Date().getFullYear());
   const month = String(new Date().getMonth() + 1);
 
@@ -466,10 +451,10 @@ function FinancialReportPanel() {
       status: string;
     }[];
   } | null>({
-    queryKey: ["dashboard-financial-summary", year, month],
+    queryKey: ["dashboard-financial-summary", year, month, currentTenantId],
     queryFn: async () => {
       const params = new URLSearchParams({ frequency: "monthly", year, month });
-      const res = await fetch(`/api/billing/summary?${params.toString()}`);
+      const res = await apiFetch(`/api/billing/summary?${params.toString()}`);
       if (res.status === 204) return null;
       if (!res.ok) return null;
       return await res.json();

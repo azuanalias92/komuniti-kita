@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
-import { useAuthStore } from "@/stores/auth-store";
+import { useTenantStore } from "@/stores/tenant-store";
+import { apiFetch } from "@/lib/api";
 
 interface CheckIn {
   id: string;
@@ -11,15 +12,12 @@ interface CheckIn {
 }
 
 export function RecentCheckins() {
+  const currentTenantId = useTenantStore((s) => s.currentTenantId);
+
   const { data } = useQuery({
-    queryKey: ["recent-checkins"],
+    queryKey: ["recent-checkins", currentTenantId],
     queryFn: async () => {
-      const token = useAuthStore.getState().auth.accessToken;
-      const res = await fetch("/api/homestay-checkins?pageSize=5", {
-        headers: {
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      });
+      const res = await apiFetch("/api/homestay-checkins?pageSize=5");
       if (!res.ok) throw new Error("Failed to fetch recent check-ins");
       const json = res.status === 204 ? { data: [] } : await res.json();
       return (json.data || []) as CheckIn[];
