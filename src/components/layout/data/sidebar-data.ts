@@ -86,6 +86,11 @@ export const sidebarData: SidebarData = {
           requiredPermission: { resource: "/billing", action: "read" },
           items: [
             {
+              title: "Submit Payment",
+              url: "/payment",
+              icon: SquarePen,
+            },
+            {
               title: "Billing",
               url: "/billing",
               icon: Receipt,
