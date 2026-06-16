@@ -101,6 +101,7 @@ async function ensureSettingsTable(db: D1Database) {
     )
   `).run()
   try { await db.prepare('ALTER TABLE billing_settings ADD COLUMN start_date TEXT').run() } catch {}
+  try { await db.prepare('ALTER TABLE billing_settings ADD COLUMN qr_key TEXT').run() } catch {}
   try { await db.prepare('ALTER TABLE billing_settings ADD COLUMN bg_key TEXT').run() } catch {}
 }
 

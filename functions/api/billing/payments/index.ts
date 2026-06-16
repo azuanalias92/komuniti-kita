@@ -34,18 +34,22 @@ export async function onRequestPost({ env, request }: { env: { DB: any }; reques
     const amount = Number(body.amount)
     const receiptKey = String(body.receiptKey || '')
     const paymentDate = String(body.paymentDate || new Date().toISOString().slice(0, 10))
+    const isAdmin = await hasPermission(env, request, '/billing', 'update')
 
     if (!houseId) return new Response(JSON.stringify({ error: 'houseId required' }), { status: 400, headers: { 'content-type': 'application/json' } })
     if (!amount || isNaN(amount) || amount <= 0) return new Response(JSON.stringify({ error: 'invalid amount' }), { status: 400, headers: { 'content-type': 'application/json' } })
-    if (!receiptKey) return new Response(JSON.stringify({ error: 'receiptKey required' }), { status: 400, headers: { 'content-type': 'application/json' } })
+    if (!isAdmin && !receiptKey) return new Response(JSON.stringify({ error: 'receiptKey required' }), { status: 400, headers: { 'content-type': 'application/json' } })
 
     const id = crypto.randomUUID()
     const now = new Date().toISOString()
+    const finalReceiptKey = receiptKey || `manual/${id}`
+    // Admin-recorded payments are auto-confirmed; resident submissions are pending
+    const initialStatus = isAdmin ? 'confirmed' : 'pending'
     await env.DB.prepare('INSERT INTO payments (id, tenant_id, house_id, amount, receipt_key, payment_date, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
-      .bind(id, tenantId, houseId, amount, receiptKey, paymentDate, 'pending', now, now)
+      .bind(id, tenantId, houseId, amount, finalReceiptKey, paymentDate, initialStatus, now, now)
       .run()
 
-    return new Response(JSON.stringify({ id, houseId, amount, receiptKey, paymentDate, status: 'pending', createdAt: now }), { headers: { 'content-type': 'application/json' } })
+    return new Response(JSON.stringify({ id, houseId, amount, receiptKey: finalReceiptKey, paymentDate, status: initialStatus, createdAt: now }), { headers: { 'content-type': 'application/json' } })
   } catch (e) {
     return new Response(JSON.stringify({ error: 'Failed to submit payment' }), { status: 500, headers: { 'content-type': 'application/json' } })
   }

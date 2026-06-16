@@ -80,7 +80,8 @@ export function HomestayBookingForm() {
 
       reset();
     } catch (error) {
-      toast.error("Failed to submit check-in. Please try again.");
+      const msg = error instanceof Error ? error.message : "Failed to submit check-in. Please try again.";
+      toast.error(msg);
     }
   };
 

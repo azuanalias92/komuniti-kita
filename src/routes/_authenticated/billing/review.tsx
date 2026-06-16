@@ -26,6 +26,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataTableColumnHeader, DataTablePagination, DataTableToolbar } from "@/components/data-table";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -46,6 +48,12 @@ export const Route = createFileRoute("/_authenticated/billing/review")({
   component: PaymentReview,
 });
 
+const STATUS_COLORS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  confirmed: "default",
+  pending: "secondary",
+  rejected: "destructive",
+};
+
 function PaymentReview() {
   const qc = useQueryClient();
   const token = useAuthStore((s) => s.auth.accessToken);
@@ -56,6 +64,7 @@ function PaymentReview() {
     pageIndex: 0,
     pageSize: 10,
   });
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const { data: residents } = useQuery<{ id: string; houseNo: string }[]>({
     queryKey: ["residents:list-basic"],
@@ -74,16 +83,16 @@ function PaymentReview() {
   }, [residents]);
 
   const { data, refetch, isFetching } = useQuery<Payment[]>({
-    queryKey: ["billing:payments:pending"],
+    queryKey: ["billing:payments:all"],
     queryFn: async () => {
-      const res = await fetch("/api/billing/payments?status=pending");
+      const res = await fetch("/api/billing/payments");
       if (!res.ok) throw new Error("Failed to load payments");
       return await res.json();
     },
   });
 
   const { mutateAsync: updateStatus } = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: "confirmed" | "rejected" }) => {
+    mutationFn: async ({ id, status }: { id: string; status: "pending" | "confirmed" | "rejected" }) => {
       const res = await fetch("/api/billing/payments", {
         method: "PUT",
         headers: { "content-type": "application/json", Authorization: `Bearer ${token}` },
@@ -93,20 +102,25 @@ function PaymentReview() {
       return await res.json();
     },
     onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ["billing:payments:pending"] });
-      toast.success("Updated");
+      await qc.invalidateQueries({ queryKey: ["billing:payments:all"] });
+      toast.success("Status updated");
     },
     onError: (e: any) => toast.error(e.message || "Update failed"),
   });
 
-  async function handleAction(id: string, status: "confirmed" | "rejected") {
+  async function handleStatusChange(id: string, status: "pending" | "confirmed" | "rejected") {
     await updateStatus({ id, status });
     await refetch();
   }
 
+  const filteredData = useMemo(() => {
+    if (statusFilter === "all") return data;
+    return (data || []).filter((p) => p.status === statusFilter);
+  }, [data, statusFilter]);
+
   const rows = useMemo<PaymentReviewRow[]>(
     () =>
-      (data || []).map((payment) => ({
+      (filteredData || []).map((payment) => ({
         id: payment.id,
         houseId: payment.house_id,
         houseNo: residentMap.get(payment.house_id) || payment.house_id,
@@ -115,7 +129,7 @@ function PaymentReview() {
         paymentDate: payment.payment_date,
         status: payment.status,
       })),
-    [data, residentMap]
+    [filteredData, residentMap]
   );
 
   const columns = useMemo<ColumnDef<PaymentReviewRow>[]>(
@@ -144,14 +158,18 @@ function PaymentReview() {
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title="Status" />
         ),
-        cell: ({ row }) => <Badge variant="secondary">{row.original.status}</Badge>,
+        cell: ({ row }) => (
+          <Badge variant={STATUS_COLORS[row.original.status] || "secondary"}>
+            {row.original.status}
+          </Badge>
+        ),
       },
       {
         accessorKey: "receiptKey",
         header: "Receipt",
         enableSorting: false,
         cell: ({ row }) =>
-          row.original.receiptKey ? (
+          row.original.receiptKey && !row.original.receiptKey.startsWith("manual/") ? (
             <a
               className="text-primary underline"
               href={`/api/r2/${row.original.receiptKey}`}
@@ -169,26 +187,37 @@ function PaymentReview() {
         header: () => <div className="text-right">Actions</div>,
         enableSorting: false,
         enableHiding: false,
-        cell: ({ row }) => (
-          <div className="space-x-2 text-right">
-            <Button
-              variant="default"
-              size="sm"
-              disabled={isFetching}
-              onClick={() => handleAction(row.original.id, "confirmed")}
-            >
-              Accept
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              disabled={isFetching}
-              onClick={() => handleAction(row.original.id, "rejected")}
-            >
-              Reject
-            </Button>
-          </div>
-        ),
+        cell: ({ row }) => {
+          const status = row.original.status;
+          return (
+            <div className="space-x-1 text-right">
+              <Button
+                variant={status === "pending" ? "default" : "outline"}
+                size="sm"
+                disabled={isFetching}
+                onClick={() => handleStatusChange(row.original.id, "pending")}
+              >
+                Pending
+              </Button>
+              <Button
+                variant={status === "confirmed" ? "default" : "outline"}
+                size="sm"
+                disabled={isFetching}
+                onClick={() => handleStatusChange(row.original.id, "confirmed")}
+              >
+                Confirm
+              </Button>
+              <Button
+                variant={status === "rejected" ? "destructive" : "outline"}
+                size="sm"
+                disabled={isFetching}
+                onClick={() => handleStatusChange(row.original.id, "rejected")}
+              >
+                Reject
+              </Button>
+            </div>
+          );
+        },
       },
     ],
     [isFetching]
@@ -227,7 +256,7 @@ function PaymentReview() {
 
   useEffect(() => {
     setPagination((current) => ({ ...current, pageIndex: 0 }));
-  }, [globalFilter, data]);
+  }, [globalFilter, data, statusFilter]);
 
   return (
     <>
@@ -240,13 +269,31 @@ function PaymentReview() {
         </div>
       </Header>
       <Main className="flex flex-1 flex-col gap-4">
-        <PageIntro title="Payment Review" subtitle="Approve or reject submitted payments." />
+        <PageIntro title="Payment Review" subtitle="View and manage all payment statuses." />
         <Card className={cn('max-sm:has-[div[role="toolbar"]]:mb-16')}>
-          <CardContent className="flex flex-col gap-4">
-            <DataTableToolbar
-              table={table}
-              searchPlaceholder="Filter by date, house, or status..."
-            />
+          <CardContent className="flex flex-col gap-4 pt-6">
+            <div className="flex items-end gap-4">
+              <div className="flex-1">
+                <DataTableToolbar
+                  table={table}
+                  searchPlaceholder="Filter by date, house, or status..."
+                />
+              </div>
+              <div className="w-48">
+                <Label>Status</Label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="confirmed">Confirmed</SelectItem>
+                    <SelectItem value="rejected">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
             <div className="overflow-x-auto rounded-md border">
               <Table>
                 <TableHeader>
@@ -282,7 +329,7 @@ function PaymentReview() {
                         colSpan={columns.length}
                         className="h-24 text-center text-muted-foreground"
                       >
-                        No pending payments found.
+                        No payments found.
                       </TableCell>
                     </TableRow>
                   )}
