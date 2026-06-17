@@ -13,7 +13,6 @@ export function AppSidebar() {
   const { collapsible, variant } = useLayout();
   const { auth } = useAuthStore();
   const { tenants, currentTenantId, setCurrentTenant } = useTenantStore();
-  const isSuperAdmin = auth.user?.role.includes("super_admin") ?? false;
 
   // Build teams list from auth tenant + any stored tenants
   const teams = useMemo(() => {
@@ -24,17 +23,8 @@ export function AppSidebar() {
       plan: t.slug,
     }));
 
-    if (isSuperAdmin) {
-      teamList.unshift({
-        id: "*",
-        name: "All Communities",
-        logo: Building2,
-        plan: "All tenants",
-      });
-    }
-
     // Add current user's tenant if not already in list
-    if (auth.user?.tenantId && auth.user.tenantId !== "*" && !teamList.find((t) => t.id === auth.user!.tenantId)) {
+    if (auth.user?.tenantId && !teamList.find((t) => t.id === auth.user!.tenantId)) {
       teamList.unshift({
         id: auth.user.tenantId,
         name: auth.user.tenantName || auth.user.tenantSlug || "My Community",
@@ -44,7 +34,7 @@ export function AppSidebar() {
     }
 
     return teamList;
-  }, [tenants, auth.user, isSuperAdmin]);
+  }, [tenants, auth.user]);
 
   const activeTeamId = currentTenantId || auth.user?.tenantId || null;
 
