@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useAuthStore } from "@/stores/auth-store";
 import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
@@ -23,6 +23,9 @@ export const Route = createFileRoute("/_authenticated/settings/billing")({
 export function BillingSettings() {
   const qc = useQueryClient();
   const token = useAuthStore((s) => s.auth.accessToken);
+  const [file, setFile] = useState<File | null>(null);
+  const [bgFile, setBgFile] = useState<File | null>(null);
+
   const { data } = useQuery<Settings | null>({
     queryKey: ["billing:settings"],
     queryFn: async () => {
@@ -32,13 +35,23 @@ export function BillingSettings() {
     },
   });
 
-  const [rate, setRate] = useState<string>(data?.rate ? String(data.rate) : "");
-  const [frequency, setFrequency] = useState<string>(data?.frequency || "monthly");
-  const [startDate, setStartDate] = useState<string>(data?.startDate || "");
-  const [bankName, setBankName] = useState<string>(data?.bankName || "");
-  const [accountNumber, setAccountNumber] = useState<string>(data?.accountNumber || "");
-  const [file, setFile] = useState<File | null>(null);
-  const [bgFile, setBgFile] = useState<File | null>(null);
+  const defaults = {
+    rate: data?.rate ? String(data.rate) : "",
+    frequency: data?.frequency || "monthly",
+    startDate: data?.startDate || "",
+    bankName: data?.bankName || "",
+    accountNumber: data?.accountNumber || "",
+  };
+
+  const [draft, setDraft] = useState<{
+    rate: string;
+    frequency: string;
+    startDate: string;
+    bankName: string;
+    accountNumber: string;
+  } | null>(null);
+
+  const form = draft ?? defaults;
 
   const { mutateAsync, isPending } = useMutation({
     mutationFn: async (payload: { rate: number; frequency: string; qrKey: string | null; bgKey: string | null; bankName: string; accountNumber: string; startDate: string }) => {
@@ -62,15 +75,16 @@ export function BillingSettings() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["billing:settings"] });
+      setDraft(null);
       toast.success("Settings saved");
     },
-    onError: (e: any) => toast.error(e.message || "Save failed"),
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Save failed"),
   });
 
   async function handleSave() {
-    const r = Number(rate);
+    const r = Number(form.rate);
     if (!r || isNaN(r) || r <= 0) return toast.error("Invalid rate");
-    if (!startDate) return toast.error("Start date is required");
+    if (!form.startDate) return toast.error("Start date is required");
     let qrKey: string | null = data?.qrKey || null;
     let bgKey: string | null = data?.bgKey || null;
     if (file) {
@@ -85,21 +99,19 @@ export function BillingSettings() {
       if (!put.ok) return toast.error("Background upload failed");
       bgKey = key;
     }
-    await mutateAsync({ rate: r, frequency, qrKey, bgKey, bankName, accountNumber, startDate });
+    await mutateAsync({
+      rate: r,
+      frequency: form.frequency,
+      qrKey,
+      bgKey,
+      bankName: form.bankName,
+      accountNumber: form.accountNumber,
+      startDate: form.startDate,
+    });
   }
 
   const qrUrl = data?.qrKey ? `/api/r2/${data.qrKey}` : "";
   const bgUrl = data?.bgKey ? `/api/r2/${data.bgKey}` : "";
-
-  useEffect(() => {
-    if (data) {
-      setRate(String(data.rate));
-      setFrequency(String(data.frequency));
-      setStartDate(String(data.startDate || ""));
-      setBankName(data.bankName || "");
-      setAccountNumber(data.accountNumber || "");
-    }
-  }, [data]);
 
   return (
     <>
@@ -110,15 +122,15 @@ export function BillingSettings() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label>Rate</Label>
-              <Input type="number" min={0} step={0.01} value={rate} onChange={(e) => setRate(e.target.value)} />
+              <Input type="number" min={0} step={0.01} value={form.rate} onChange={(e) => setDraft((prev) => ({ ...(prev ?? defaults), rate: e.target.value }))} />
             </div>
             <div className="space-y-2">
               <Label>Start Date</Label>
-              <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+              <Input type="date" value={form.startDate} onChange={(e) => setDraft((prev) => ({ ...(prev ?? defaults), startDate: e.target.value }))} />
             </div>
             <div className="space-y-2">
               <Label>Payment Frequency</Label>
-              <Select value={frequency} onValueChange={setFrequency}>
+              <Select value={form.frequency} onValueChange={(value) => setDraft((prev) => ({ ...(prev ?? defaults), frequency: value }))}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select frequency" />
                 </SelectTrigger>
@@ -131,11 +143,11 @@ export function BillingSettings() {
             </div>
             <div className="space-y-2">
               <Label>Bank Name</Label>
-              <Input value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="e.g. CIMB Bank" />
+              <Input value={form.bankName} onChange={(e) => setDraft((prev) => ({ ...(prev ?? defaults), bankName: e.target.value }))} placeholder="e.g. CIMB Bank" />
             </div>
             <div className="space-y-2">
               <Label>Account Number</Label>
-              <Input value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} placeholder="e.g. 1234-5678-9010" />
+              <Input value={form.accountNumber} onChange={(e) => setDraft((prev) => ({ ...(prev ?? defaults), accountNumber: e.target.value }))} placeholder="e.g. 1234-5678-9010" />
             </div>
             <div className="space-y-2">
               <Label>QR Code Image</Label>

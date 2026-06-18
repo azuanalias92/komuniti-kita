@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -18,13 +18,25 @@ export const Route = createFileRoute("/payment")({
 });
 
 function PaymentPage() {
+  const [houseId, setHouseId] = useState("");
+  const [amount, setAmount] = useState("");
+  const [amountTouched, setAmountTouched] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [lastHouse, setLastHouse] = useState("");
+
   const { data: residents } = useQuery<Resident[]>({
     queryKey: ["residents:list"],
     queryFn: async () => {
       const res = await apiFetch("/api/residents?page=1&pageSize=1000");
       if (res.status === 204) return [];
-      const json = await res.json();
-      return (json.data || []).map((r: any) => ({ id: r.id, houseNo: r.houseNo }));
+      const json = (await res.json()) as { data?: unknown[] };
+      const rows = Array.isArray(json.data) ? json.data : [];
+      return rows.map((r) => {
+        const row = r as Record<string, unknown>;
+        return { id: String(row.id ?? ""), houseNo: String(row.houseNo ?? "") };
+      });
     },
   });
   const { data: settings } = useQuery<Settings | null>({
@@ -36,23 +48,14 @@ function PaymentPage() {
     },
   });
 
-  const [houseId, setHouseId] = useState("");
-  const [amount, setAmount] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [lastHouse, setLastHouse] = useState("");
   const qrUrl = useMemo(() => (settings?.qrKey ? `/api/r2/${settings.qrKey}` : ""), [settings]);
   const bgUrl = useMemo(() => (settings?.bgKey ? `/api/r2/${settings.bgKey}` : ""), [settings]);
-
-  useEffect(() => {
-    if (settings?.rate && !amount) setAmount(String(settings.rate));
-  }, [settings?.rate]);
+  const amountValue = amountTouched ? amount : settings?.rate ? String(settings.rate) : amount;
 
   async function handleSubmit() {
     try {
       if (!houseId) return toast.error("Please select a house");
-      const amt = Number(amount);
+      const amt = Number(amountValue);
       if (!amt || isNaN(amt) || amt <= 0) return toast.error("Amount is invalid");
       if (!file) return toast.error("Please upload a receipt");
 
@@ -71,8 +74,8 @@ function PaymentPage() {
       const house = (residents || []).find((r) => r.id === houseId);
       setLastHouse(house?.houseNo || houseId);
       setSubmitted(true);
-    } catch (e: any) {
-      toast.error(e.message || "Submission error");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Submission error");
     } finally {
       setSubmitting(false);
     }
@@ -80,7 +83,8 @@ function PaymentPage() {
 
   function resetForm() {
     setHouseId("");
-    setAmount(settings?.rate ? String(settings.rate) : "");
+    setAmount("");
+    setAmountTouched(false);
     setFile(null);
     setSubmitted(false);
   }
@@ -165,7 +169,7 @@ function PaymentPage() {
             </div>
             <div className="space-y-2">
               <Label>Amount</Label>
-              <Input type="number" min={0} step={0.01} value={amount} onChange={(e) => setAmount(e.target.value)} />
+              <Input type="number" min={0} step={0.01} value={amountValue} onChange={(e) => { setAmountTouched(true); setAmount(e.target.value); }} />
             </div>
             <div className="space-y-2">
               <Label>Receipt Image</Label>

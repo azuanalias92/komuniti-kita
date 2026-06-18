@@ -23,7 +23,12 @@ async function fetchUsers(params: SearchParams) {
   })
   if (res.status === 204) return { data: [], page: params.page, pageSize: params.pageSize, total: 0 }
   if (!res.ok) throw new Error('Failed to load users')
-  return res.json() as Promise<{ data: any[]; page: number; pageSize: number; total: number }>
+  return res.json() as Promise<{
+    data: unknown[]
+    page: number
+    pageSize: number
+    total: number
+  }>
 }
 
 export function useUsers(params: SearchParams) {

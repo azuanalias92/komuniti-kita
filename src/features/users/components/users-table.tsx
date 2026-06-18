@@ -59,9 +59,18 @@ export function UsersTable({ data, search, navigate }: DataTableProps) {
     ],
   });
 
-  const usernameFilter = (columnFilters.find((f) => (f as any).id === "username") as any)?.value as string | undefined;
-  const statusFilter = (columnFilters.find((f) => (f as any).id === "status") as any)?.value as string[] | undefined;
-  const roleFilter = (columnFilters.find((f) => (f as any).id === "role") as any)?.value as string[] | undefined;
+  const usernameFilterValue = columnFilters.find((f) => f.id === "username")?.value;
+  const statusFilterValue = columnFilters.find((f) => f.id === "status")?.value;
+  const roleFilterValue = columnFilters.find((f) => f.id === "role")?.value;
+
+  const usernameFilter =
+    typeof usernameFilterValue === "string" ? usernameFilterValue : undefined;
+  const statusFilter = Array.isArray(statusFilterValue)
+    ? (statusFilterValue.filter((v) => typeof v === "string") as string[])
+    : undefined;
+  const roleFilter = Array.isArray(roleFilterValue)
+    ? (roleFilterValue.filter((v) => typeof v === "string") as string[])
+    : undefined;
 
   const {
     users: apiUsers,

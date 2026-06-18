@@ -14,8 +14,10 @@ import { routeTree } from "./routeTree.gen";
 import "./styles/index.css";
 import { useRegisterSW } from "virtual:pwa-register/react";
 
+type WindowWithKK = Window & { __kkFetchPatched?: boolean };
+
 function installApiFetchInterceptor() {
-  if (typeof window === "undefined" || (window as any).__kkFetchPatched) return;
+  if (typeof window === "undefined" || (window as WindowWithKK).__kkFetchPatched) return;
 
   const originalFetch = window.fetch.bind(window);
 
@@ -57,7 +59,7 @@ function installApiFetchInterceptor() {
     return originalFetch(input, { ...init, headers });
   };
 
-  (window as any).__kkFetchPatched = true;
+  (window as WindowWithKK).__kkFetchPatched = true;
 }
 
 installApiFetchInterceptor();
@@ -66,8 +68,6 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: (failureCount, error) => {
-        if (import.meta.env.DEV) console.log({ failureCount, error });
-
         if (failureCount >= 0 && import.meta.env.DEV) return false;
         if (failureCount > 3 && import.meta.env.PROD) return false;
 
@@ -151,10 +151,11 @@ function ServiceWorkerHandler() {
   useRegisterSW({
     immediate: true,
     onRegisteredSW(swUrl: string, registration: ServiceWorkerRegistration | undefined) {
-      console.log("SW Registered:", swUrl, registration);
+      void swUrl;
+      void registration;
     },
     onRegisterError(error: Error) {
-      console.error("SW Registration Error:", error);
+      void error;
     },
   });
 

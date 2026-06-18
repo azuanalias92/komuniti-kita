@@ -15,7 +15,9 @@ export const Route = createFileRoute('/_authenticated')({
     if (userRole) {
       try {
         await useAclStore.getState().loadForRole(userRole)
-      } catch {}
+      } catch (e) {
+        void e
+      }
     }
 
     const href = location.href || ''

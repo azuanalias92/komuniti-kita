@@ -51,11 +51,15 @@ export function syncTenantAfterAuth() {
         return res.json()
       })
       .then((data) => {
-        const allTenants = (data || []).map((t: any) => ({
-          id: t.id,
-          name: t.name,
-          slug: t.slug,
-        }))
+        const list = Array.isArray(data) ? data : []
+        const allTenants = list.map((t) => {
+          const tenant = t as Record<string, unknown>
+          return {
+            id: String(tenant.id ?? ''),
+            name: String(tenant.name ?? ''),
+            slug: String(tenant.slug ?? ''),
+          }
+        })
         setTenants(allTenants)
       })
       .catch(() => {
