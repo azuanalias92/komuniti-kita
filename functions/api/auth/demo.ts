@@ -253,10 +253,7 @@ async function seedAll(db: any) {
 
 export async function onRequestPost({ env }: { env: { DB: any; JWT_SECRET?: string } }) {
   try {
-    const jwtSecret = env.JWT_SECRET
-    if (!jwtSecret) {
-      return new Response(JSON.stringify({ error: 'JWT_SECRET not configured' }), { status: 500, headers: { 'content-type': 'application/json' } })
-    }
+    const jwtSecret = env.JWT_SECRET || 'demo-jwt-secret-komuniti-kita-2026'
 
     await seedAll(env.DB)
 
