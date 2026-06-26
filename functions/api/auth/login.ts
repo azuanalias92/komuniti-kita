@@ -113,7 +113,7 @@ export async function onRequestPost({
   const headers = new Headers({ 'content-type': 'application/json' })
   headers.append(
     'Set-Cookie',
-    `thisisjustarandomstring=${encodeURIComponent(JSON.stringify(accessToken))}; Path=/; Max-Age=${60 * 60 * 24 * 7}`
+    `access_token=${encodeURIComponent(JSON.stringify(accessToken))}; Path=/; Max-Age=${60 * 60 * 24 * 7}`
   )
   headers.append(
     'Set-Cookie',

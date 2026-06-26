@@ -16,7 +16,7 @@ export const Route = createFileRoute('/_authenticated')({
       try {
         await useAclStore.getState().loadForRole(userRole)
       } catch (e) {
-        void e
+        console.error('Failed to load ACL permissions:', e)
       }
     }
 

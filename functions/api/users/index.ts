@@ -99,7 +99,7 @@ export async function onRequestGet({ request, env }: { request: Request; env: { 
       headers: { "content-type": "application/json" },
     });
   } catch (e) {
-    const msg = e instanceof Error ? `${e.message}\n${e.stack}` : String(e);
+    const msg = e instanceof Error ? e.message : String(e);
     return new Response(JSON.stringify({ error: 'failed_to_fetch_users', detail: msg, data: [], page: 1, pageSize: 10, total: 0 }), {
       status: 500,
       headers: { "content-type": "application/json" },

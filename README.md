@@ -35,8 +35,8 @@ Community management admin dashboard — manage residents, homestay check-ins, g
 ## Local Development
 
 ```bash
-pnpm install
-pnpm dev
+yarn install
+yarn dev
 ```
 
 ## Cloudflare Pages Deployment
@@ -56,8 +56,8 @@ You can also configure bindings in the Cloudflare Pages dashboard under Settings
 ### Build and Deploy
 
 ```bash
-pnpm build
-pnpm cf:deploy
+yarn build
+yarn cf:deploy
 ```
 
 `cf:deploy` publishes the built `dist` directory to Cloudflare Pages using the configured project.
@@ -65,8 +65,8 @@ pnpm cf:deploy
 ### Local Pages Dev (Simulated D1/R2)
 
 ```bash
-pnpm build
-pnpm cf:dev
+yarn build
+yarn cf:dev
 ```
 
 Runs a local server at `http://localhost:8788/` with simulated D1 and R2.
@@ -101,7 +101,6 @@ Runs a local server at `http://localhost:8788/` with simulated D1 and R2.
 - `GET /api/users` — list users (filters: username, status, role, pagination)
 - `POST /api/users` — create user
 - `PUT /api/users/[userId]` — update a user by id
-- `PATCH /api/users/[id]/role` — update a user role
 - `PATCH /api/users/[userId]/role` — update a user role by userId
 
 ### Roles & ACL

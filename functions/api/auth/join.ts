@@ -167,9 +167,9 @@ export async function onRequestPost({ request, env }: { request: Request; env: {
     const now = new Date().toISOString();
 
     await env.DB.prepare(
-      `INSERT INTO pending_approvals (id, tenant_id, invite_code, email, username, status, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)`
-    ).bind(id, tenantId, inviteCode, email, username, now, now).run();
+      `INSERT INTO pending_approvals (id, tenant_id, invite_code, email, password_hash, username, status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?)`
+    ).bind(id, tenantId, inviteCode, email, null, username, now, now).run();
 
     return new Response(JSON.stringify({
       message: 'request_submitted',
