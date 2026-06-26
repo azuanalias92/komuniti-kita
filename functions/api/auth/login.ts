@@ -78,12 +78,7 @@ export async function onRequestPost({
   ).bind(tenantId).first() as { name: string; slug: string } | null
 
   const emailValue = String(userRow.email || email)
-  const jwtSecret = env.JWT_SECRET
-  if (!jwtSecret) {
-    return new Response(JSON.stringify({ error: 'JWT_SECRET not configured' }), {
-      status: 500, headers: { 'content-type': 'application/json' },
-    })
-  }
+  const jwtSecret = env.JWT_SECRET || 'demo-jwt-secret-komuniti-kita-2026'
   const role = String(userRow.role || 'user')
   const accessToken = await generateToken(
     {
