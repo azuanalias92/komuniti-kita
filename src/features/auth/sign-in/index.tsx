@@ -27,6 +27,7 @@ export function SignIn() {
   const { error, new_user, email, name } = useSearch({ from: "/(auth)/sign-in" });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEmailSigningIn, setIsEmailSigningIn] = useState(false);
+  const [isDemoLoading, setIsDemoLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [tenantName, setTenantName] = useState("");
   const { auth } = useAuthStore();
@@ -118,6 +119,27 @@ export function SignIn() {
     }
   }
 
+  async function onDemoSignIn() {
+    setIsDemoLoading(true);
+    try {
+      const res = await fetch("/api/auth/demo", { method: "POST" });
+      const json = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(json.error || "Demo sign-in failed");
+      }
+
+      auth.setAccessToken(typeof json.accessToken === "string" ? json.accessToken : "");
+      auth.setUser(json.user ?? null);
+      syncTenantAfterAuth();
+      window.location.assign("/");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Demo sign-in failed.");
+    } finally {
+      setIsDemoLoading(false);
+    }
+  }
+
   if (isSubmitted) {
     return (
       <AuthLayout>
@@ -199,6 +221,19 @@ export function SignIn() {
                     </Button>
                   </form>
                 </Form>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="flex-1"
+                    disabled={isDemoLoading}
+                    onClick={onDemoSignIn}
+                  >
+                    {isDemoLoading ? "Loading demo..." : "🔍 Try Demo Account"}
+                  </Button>
+                  <span className="text-xs text-muted-foreground">Instant access · pre-filled data</span>
+                </div>
 
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
